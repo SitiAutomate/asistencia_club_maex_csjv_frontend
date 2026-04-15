@@ -27,4 +27,4 @@ coverage
 *.sw?
 
 .env.*
-!.env.example
+!.env.example.env
