@@ -26,5 +26,6 @@ coverage
 *.sln
 *.sw?
 
+.env
 .env.*
 !.env.example.env
