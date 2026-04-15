@@ -123,8 +123,16 @@ export function AdministradorPage() {
   const [activeTab, setActiveTab] = useState('tabla');
 
   const resumenQuery = useQuery({
-    queryKey: ['admin-informes-resumen'],
-    queryFn: () => getJson('/api/admin/informes/resumen'),
+    queryKey: ['admin-informes-resumen', applied],
+    queryFn: () => {
+      const u = new URLSearchParams();
+      if (applied.fechaInicio) u.set('fechaInicio', applied.fechaInicio);
+      if (applied.fechaFin) u.set('fechaFin', applied.fechaFin);
+      if (applied.categoria) u.set('categoria', applied.categoria);
+      if (applied.entrenador) u.set('entrenador', applied.entrenador);
+      if (applied.estado && applied.estado !== 'todos') u.set('estado', applied.estado);
+      return getJson(`/api/admin/informes/resumen?${u.toString()}`);
+    },
     enabled: navEnabled && isAdmin,
     staleTime: 120_000,
   });

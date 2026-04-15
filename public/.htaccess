@@ -1,0 +1,10 @@
+RewriteEngine On
+
+# No reescribir llamadas al backend ni archivos de subida.
+RewriteCond %{REQUEST_URI} !^/api/ [NC]
+RewriteCond %{REQUEST_URI} !^/uploads/ [NC]
+
+# Si no existe archivo/carpeta real, enviar a index.html (SPA fallback).
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.html [L]
