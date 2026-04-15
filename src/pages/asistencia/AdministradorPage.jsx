@@ -100,9 +100,18 @@ export function AdministradorPage() {
   const { user } = useOutletContext() || {};
   const navEnabled = isNavKeyEnabled('administrador');
   const isAdmin = String(user?.rol || '').trim() === 'Administrador';
+  const currentYearNum = new Date().getFullYear();
+  const currentYear = String(Math.max(2025, currentYearNum));
+  const firstYear = Math.max(2025, Number(currentYear) - 2);
+  const aniosDisponibles = Array.from(
+    { length: Number(currentYear) - firstYear + 1 },
+    (_, idx) => String(firstYear + idx),
+  );
+  const yearActual = currentYear;
 
   const [fechaInicio, setFechaInicio] = useState('');
   const [fechaFin, setFechaFin] = useState('');
+  const [anio, setAnio] = useState(yearActual);
   const [categoria, setCategoria] = useState('');
   const [categoriaOpen, setCategoriaOpen] = useState(false);
   const [categoriaSearch, setCategoriaSearch] = useState('');
@@ -112,6 +121,7 @@ export function AdministradorPage() {
   const [applied, setApplied] = useState({
     fechaInicio: '',
     fechaFin: '',
+    anio: yearActual,
     categoria: '',
     entrenador: '',
     estado: 'todos',
@@ -128,6 +138,7 @@ export function AdministradorPage() {
       const u = new URLSearchParams();
       if (applied.fechaInicio) u.set('fechaInicio', applied.fechaInicio);
       if (applied.fechaFin) u.set('fechaFin', applied.fechaFin);
+      if (applied.anio) u.set('anio', applied.anio);
       if (applied.categoria) u.set('categoria', applied.categoria);
       if (applied.entrenador) u.set('entrenador', applied.entrenador);
       if (applied.estado && applied.estado !== 'todos') u.set('estado', applied.estado);
@@ -158,6 +169,7 @@ export function AdministradorPage() {
       u.set('limit', String(limit));
       if (applied.fechaInicio) u.set('fechaInicio', applied.fechaInicio);
       if (applied.fechaFin) u.set('fechaFin', applied.fechaFin);
+      if (applied.anio) u.set('anio', applied.anio);
       if (applied.categoria) u.set('categoria', applied.categoria);
       if (applied.entrenador) u.set('entrenador', applied.entrenador);
       if (applied.estado && applied.estado !== 'todos') u.set('estado', applied.estado);
@@ -174,6 +186,7 @@ export function AdministradorPage() {
       const u = new URLSearchParams();
       if (applied.fechaInicio) u.set('fechaInicio', applied.fechaInicio);
       if (applied.fechaFin) u.set('fechaFin', applied.fechaFin);
+      if (applied.anio) u.set('anio', applied.anio);
       if (applied.categoria) u.set('categoria', applied.categoria);
       if (applied.entrenador) u.set('entrenador', applied.entrenador);
       if (applied.estado && applied.estado !== 'todos') u.set('estado', applied.estado);
@@ -201,6 +214,7 @@ export function AdministradorPage() {
     setApplied({
       fechaInicio: fechaInicio.trim(),
       fechaFin: fechaFin.trim(),
+      anio: String(anio || '').trim(),
       categoria: categoria.trim(),
       entrenador: entrenador.trim(),
       estado,
@@ -212,6 +226,7 @@ export function AdministradorPage() {
   const limpiarFiltros = () => {
     setFechaInicio('');
     setFechaFin('');
+    setAnio(yearActual);
     setCategoria('');
     setCategoriaOpen(false);
     setCategoriaSearch('');
@@ -220,6 +235,7 @@ export function AdministradorPage() {
     setApplied({
       fechaInicio: '',
       fechaFin: '',
+      anio: yearActual,
       categoria: '',
       entrenador: '',
       estado: 'todos',
@@ -233,6 +249,7 @@ export function AdministradorPage() {
   if (!isAdmin) return <Navigate to={getDefaultAppPath()} replace />;
 
   const r = resumenQuery.data || {};
+  const statsLoading = resumenQuery.isLoading || resumenQuery.isFetching;
   const categorias = metaQuery.data?.categorias || [];
   const entrenadores = metaQuery.data?.entrenadores || [];
   const categoriaActual = categorias.find((c) => c.id === categoria) || null;
@@ -247,41 +264,41 @@ export function AdministradorPage() {
       <h2 className="h5 fw-bold mb-3 att-admin-page__title">Administrador — Informes</h2>
 
       <div className="att-admin-stats">
-        <article className="att-admin-stat-card">
+        <article className={`att-admin-stat-card ${statsLoading ? 'is-loading' : ''}`}>
           <span className="att-admin-stat-card__icon" aria-hidden="true">
             <StatIcon type="total" />
           </span>
           <span className="att-admin-stat-card__label">Total evaluaciones</span>
-          <strong className="att-admin-stat-card__value">{resumenQuery.isLoading ? '…' : r.totalEvaluaciones ?? '—'}</strong>
+          <strong className="att-admin-stat-card__value">{statsLoading ? '…' : r.totalEvaluaciones ?? '—'}</strong>
         </article>
-        <article className="att-admin-stat-card">
+        <article className={`att-admin-stat-card ${statsLoading ? 'is-loading' : ''}`}>
           <span className="att-admin-stat-card__icon" aria-hidden="true">
             <StatIcon type="pdf" />
           </span>
           <span className="att-admin-stat-card__label">Con informe (PDF)</span>
-          <strong className="att-admin-stat-card__value">{resumenQuery.isLoading ? '…' : r.conInforme ?? '—'}</strong>
+          <strong className="att-admin-stat-card__value">{statsLoading ? '…' : r.conInforme ?? '—'}</strong>
         </article>
-        <article className="att-admin-stat-card">
+        <article className={`att-admin-stat-card ${statsLoading ? 'is-loading' : ''}`}>
           <span className="att-admin-stat-card__icon" aria-hidden="true">
             <StatIcon type="missing" />
           </span>
           <span className="att-admin-stat-card__label">Sin informe</span>
-          <strong className="att-admin-stat-card__value">{resumenQuery.isLoading ? '…' : r.sinInforme ?? '—'}</strong>
+          <strong className="att-admin-stat-card__value">{statsLoading ? '…' : r.sinInforme ?? '—'}</strong>
         </article>
-        <article className="att-admin-stat-card">
+        <article className={`att-admin-stat-card ${statsLoading ? 'is-loading' : ''}`}>
           <span className="att-admin-stat-card__icon" aria-hidden="true">
             <StatIcon type="sent" />
           </span>
           <span className="att-admin-stat-card__label">Enviados</span>
-          <strong className="att-admin-stat-card__value">{resumenQuery.isLoading ? '…' : r.enviados ?? '—'}</strong>
+          <strong className="att-admin-stat-card__value">{statsLoading ? '…' : r.enviados ?? '—'}</strong>
         </article>
-        <article className="att-admin-stat-card att-admin-stat-card--accent">
+        <article className={`att-admin-stat-card att-admin-stat-card--accent ${statsLoading ? 'is-loading' : ''}`}>
           <span className="att-admin-stat-card__icon" aria-hidden="true">
             <StatIcon type="missingMonth" />
           </span>
           <span className="att-admin-stat-card__label">Sin informe (mes actual)</span>
           <strong className="att-admin-stat-card__value">
-            {resumenQuery.isLoading ? '…' : r.participantesSinInformeMesActual ?? '—'}
+            {statsLoading ? '…' : r.participantesSinInformeMesActual ?? '—'}
           </strong>
         </article>
       </div>
@@ -314,6 +331,21 @@ export function AdministradorPage() {
                 Fecha fin
               </label>
               <input type="date" className="form-control form-control-sm" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} />
+            </div>
+            <div className="col-12 col-md-6 col-lg-3">
+              <label className="form-label small mb-1 att-admin-filter-label">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true">
+                  <path d="M5 7h14M7 4v6M17 4v6M5 10h14v10H5z" stroke="currentColor" strokeWidth="1.8" />
+                </svg>
+                Año
+              </label>
+              <select className="form-select form-select-sm" value={anio} onChange={(e) => setAnio(e.target.value)}>
+                {aniosDisponibles.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="col-12 col-md-6 col-lg-3">
               <label className="form-label small mb-1 att-admin-filter-label">
