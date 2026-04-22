@@ -68,12 +68,15 @@ export function AsistenciaPage() {
   const defaultCourseId = useMemo(() => cursoId(cursosAsignados[0]), [cursosAsignados]);
   const canViewAllByDefault = isAdmin || Boolean(cursosQuery.data?.tieneApoyoGlobal);
   const effectiveCourseId = canViewAllByDefault ? courseId : courseId || defaultCourseId;
+  const selectedFilterCourseId = canViewAllByDefault ? courseId : effectiveCourseId;
 
   const inscritosQuery = useQuery({
-    queryKey: ['inscritos', { estado: 'CONFIRMADO', withRutaExtra: true, idCurso: effectiveCourseId || null }],
+    queryKey: canViewAllByDefault
+      ? ['inscritos', { estado: 'CONFIRMADO', withRutaExtra: true, scope: 'all' }]
+      : ['inscritos', { estado: 'CONFIRMADO', withRutaExtra: true, idCurso: effectiveCourseId || null }],
     queryFn: () => {
       const u = new URLSearchParams({ estado: 'CONFIRMADO', withRutaExtra: 'true' });
-      if (effectiveCourseId) u.set('idCurso', effectiveCourseId);
+      if (!canViewAllByDefault && effectiveCourseId) u.set('idCurso', effectiveCourseId);
       return getJson(`/api/inscritos?${u.toString()}`);
     },
     enabled: Boolean(email) && hasAsignacion && (canViewAllByDefault || Boolean(effectiveCourseId)),
@@ -119,14 +122,45 @@ export function AsistenciaPage() {
 
   const filtered = useMemo(() => {
     const list = inscritosQuery.data?.inscritos || [];
-    return list
+    const byCourse = selectedFilterCourseId
+      ? list.filter((i) => String(getIdCurso(i) || '').trim() === String(selectedFilterCourseId).trim())
+      : list;
+    const byName = byCourse
       .filter((i) => matchesParticipantName(getNombreCompleto(i), search))
       .sort((a, b) =>
         getNombreCompleto(a).localeCompare(getNombreCompleto(b), 'es', {
           sensitivity: 'base',
         }),
       );
-  }, [inscritosQuery.data, search]);
+
+    // Evita keys duplicadas en React cuando el backend trae filas repetidas
+    // para el mismo participante+curso.
+    const unique = [];
+    const seen = new Set();
+    const duplicates = [];
+    for (const item of byName) {
+      const k = rowKey(item);
+      if (seen.has(k)) {
+        duplicates.push(k);
+        continue;
+      }
+      seen.add(k);
+      unique.push(item);
+    }
+
+    if (duplicates.length > 0 && import.meta.env.DEV) {
+      // Log temporal de diagnóstico para detectar origen de duplicados/mezclas.
+      console.warn('[AsistenciaPage] inscritos duplicados detectados', {
+        selectedFilterCourseId: selectedFilterCourseId || 'ALL',
+        search,
+        duplicates: [...new Set(duplicates)],
+        totalBeforeDedup: byName.length,
+        totalAfterDedup: unique.length,
+      });
+    }
+
+    return unique;
+  }, [inscritosQuery.data, search, selectedFilterCourseId]);
 
   const cursos = useMemo(() => {
     const all = cursosQuery.data?.cursos || [];
