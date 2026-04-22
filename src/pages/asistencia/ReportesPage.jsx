@@ -280,7 +280,11 @@ export function ReportesPage() {
     placeholderData: (prev) => prev,
   });
 
-  const evaluaciones = useMemo(() => evalsQuery.data?.evaluaciones || [], [evalsQuery.data]);
+  const evaluaciones = useMemo(() => {
+    const rows = evalsQuery.data?.evaluaciones || [];
+    if (!effectiveCursoId) return rows;
+    return rows.filter((e) => String(e?.categoria ?? '').trim() === String(effectiveCursoId).trim());
+  }, [evalsQuery.data, effectiveCursoId]);
   const selectedEval = useMemo(
     () => evaluaciones.find((e) => Number(e.id) === Number(selectedEvalId)) || evaluaciones[0] || null,
     [evaluaciones, selectedEvalId],
