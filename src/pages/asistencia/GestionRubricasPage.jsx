@@ -26,10 +26,6 @@ function cursoLabel(c) {
   return c?.Nombre_del_curso || c?.nombre_del_curso || c?.Nombre_Corto_Curso || c?.nombre_corto_curso || 'Sin nombre';
 }
 
-function toCsvValue(value) {
-  return `"${String(value ?? '').replace(/"/g, '""')}"`;
-}
-
 function exportRubricas(rows) {
   const headers = [
     'Nombre',
@@ -43,7 +39,8 @@ function exportRubricas(rows) {
     'Satisfactorio Básico',
     'En Proceso de Desarrollo',
   ];
-  const lines = [headers.map(toCsvValue).join(',')];
+  const toCsv = (value) => `"${String(value ?? '').replace(/"/g, '""').replace(/\r?\n/g, ' ')}"`;
+  const lines = [headers.map(toCsv).join(',')];
   rows.forEach((r) => {
     lines.push(
       [
@@ -58,7 +55,7 @@ function exportRubricas(rows) {
         r.medio,
         r.bajo,
       ]
-        .map(toCsvValue)
+        .map(toCsv)
         .join(','),
     );
   });
@@ -294,7 +291,7 @@ function RubricaModal({
                 Satisfactorio Alto
                 <textarea
                   className="form-control mt-1"
-                  rows={3}
+                  rows={5}
                   value={form.alto}
                   onChange={(e) => setForm((prev) => ({ ...prev, alto: e.target.value }))}
                   maxLength={1000}
@@ -304,7 +301,7 @@ function RubricaModal({
                 Satisfactorio Básico
                 <textarea
                   className="form-control mt-1"
-                  rows={3}
+                  rows={5}
                   value={form.medio}
                   onChange={(e) => setForm((prev) => ({ ...prev, medio: e.target.value }))}
                   maxLength={1000}
@@ -314,7 +311,7 @@ function RubricaModal({
                 En Proceso de Desarrollo
                 <textarea
                   className="form-control mt-1"
-                  rows={3}
+                  rows={5}
                   value={form.bajo}
                   onChange={(e) => setForm((prev) => ({ ...prev, bajo: e.target.value }))}
                   maxLength={1000}
@@ -659,7 +656,7 @@ export function GestionRubricasPage() {
         ) : (
           <>
             <div className="table-responsive">
-              <table className="table table-sm align-middle att-history-table">
+              <table className="table table-sm align-middle att-history-table att-rubricas-table">
                 <thead>
                   <tr>
                     <th>Nombre</th>

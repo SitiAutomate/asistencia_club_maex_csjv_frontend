@@ -122,7 +122,12 @@ export function AppShell() {
               alt=""
               height={32}
               onError={(e) => {
-                e.target.style.display = 'none';
+                if (e.target.dataset.fallbackApplied === '1') {
+                  e.target.style.display = 'none';
+                  return;
+                }
+                e.target.dataset.fallbackApplied = '1';
+                e.target.src = '/favicon.svg';
               }}
             />
           </div>

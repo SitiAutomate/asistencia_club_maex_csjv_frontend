@@ -280,13 +280,6 @@ export function AdministradorPage() {
         </article>
         <article className={`att-admin-stat-card ${statsLoading ? 'is-loading' : ''}`}>
           <span className="att-admin-stat-card__icon" aria-hidden="true">
-            <StatIcon type="missing" />
-          </span>
-          <span className="att-admin-stat-card__label">Sin informe</span>
-          <strong className="att-admin-stat-card__value">{statsLoading ? '…' : r.sinInforme ?? '—'}</strong>
-        </article>
-        <article className={`att-admin-stat-card ${statsLoading ? 'is-loading' : ''}`}>
-          <span className="att-admin-stat-card__icon" aria-hidden="true">
             <StatIcon type="sent" />
           </span>
           <span className="att-admin-stat-card__label">Enviados</span>

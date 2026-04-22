@@ -80,15 +80,11 @@ function evaluacionFotoSrc(foto) {
   const s = String(foto).trim();
   if (!s) return '';
   if (/^https?:\/\//i.test(s)) {
-    try {
-      const u = new URL(s);
-      if (u.pathname.startsWith('/uploads')) return u.pathname + u.search;
-    } catch {
-      /* ignore */
-    }
     return s;
   }
-  return s.startsWith('/') ? s : `/${s}`;
+  const p = s.startsWith('/') ? s : `/${s}`;
+  if (p.startsWith('/uploads')) return apiUrl(p);
+  return p;
 }
 
 function SuccessModal({

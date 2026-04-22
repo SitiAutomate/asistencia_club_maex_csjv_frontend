@@ -147,8 +147,9 @@
 
 .att-toolbar--sticky {
   position: sticky;
-  top: 4.15rem;
+  top: 3.6rem;
   z-index: 1015;
+  margin-top: -1px;
 }
 
 .att-main {
@@ -882,6 +883,23 @@
   box-shadow: 2px 2px 0 rgba(15, 39, 71, 0.12);
 }
 
+.att-rubrica-levels .form-label textarea {
+  min-height: 8.5rem;
+}
+
+.att-rubricas-table tbody tr {
+  transition: background-color 0.16s ease;
+  cursor: pointer;
+}
+
+.att-rubricas-table tbody tr:hover {
+  background: #eef6ff;
+}
+
+.att-rubricas-table tbody tr:hover > td {
+  background: #eef6ff !important;
+}
+
 .att-toast {
   position: fixed;
   top: 1rem;
@@ -1388,7 +1406,7 @@
   }
 
   .att-toolbar--sticky {
-    top: 3.7rem;
+    top: 3.2rem;
   }
 
   .att-header {
@@ -1543,7 +1561,7 @@
 
 .att-admin-stats {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.75rem;
   margin-bottom: 1.25rem;
 }
