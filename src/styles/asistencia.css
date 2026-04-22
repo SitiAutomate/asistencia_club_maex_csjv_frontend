@@ -1398,7 +1398,12 @@
   .att-search-input {
     width: 100%;
     min-width: 0;
-    font-size: 0.82rem;
+    /* 16px: iOS no hace zoom al enfocar inputs < 16px */
+    font-size: 16px;
+  }
+
+  .att-course-search {
+    font-size: 16px;
   }
 
   .att-search-wrap {

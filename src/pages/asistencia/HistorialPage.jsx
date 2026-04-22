@@ -5,10 +5,26 @@ import { getJson } from '../../lib/api.js';
 import { getDefaultAppPath, isNavKeyEnabled } from '../../lib/navFeatures.js';
 import { normalizeForSearch } from '../../lib/normalizeSearch.js';
 
+/** YYYY-MM-DD como medianoche UTC hace que en CO se vea el día anterior; parsear como fecha local. */
+function parseFechaCalendarioLocal(v) {
+  if (v == null || v === '') return null;
+  const s = String(v).trim();
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  if (m) {
+    const y = Number(m[1]);
+    const mo = Number(m[2]) - 1;
+    const d = Number(m[3]);
+    const local = new Date(y, mo, d);
+    return Number.isNaN(local.getTime()) ? null : local;
+  }
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 function fmtFecha(v) {
   if (!v) return '—';
-  const d = new Date(v);
-  if (Number.isNaN(d.getTime())) return String(v).slice(0, 10);
+  const d = parseFechaCalendarioLocal(v);
+  if (!d) return String(v).slice(0, 10);
   return d.toLocaleDateString('es-CO');
 }
 
@@ -119,8 +135,8 @@ export function HistorialPage() {
     const y = today.getFullYear();
     const m = today.getMonth();
     return data.filter((row) => {
-      const d = new Date(row.fecha);
-      return !Number.isNaN(d.getTime()) && d.getFullYear() === y && d.getMonth() === m;
+      const d = parseFechaCalendarioLocal(row.fecha);
+      return d && d.getFullYear() === y && d.getMonth() === m;
     });
   }, [data, today]);
 
