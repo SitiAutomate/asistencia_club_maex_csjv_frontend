@@ -56,6 +56,7 @@ export function AsistenciaPage() {
   const coursePickerRef = useRef(null);
   const supportWhatsApp = import.meta.env.VITE_SUPPORT_WHATSAPP || '';
   const supportWhatsAppUrl = whatsappHref(supportWhatsApp);
+  const inscritosEstados = 'CONFIRMADO,ACTIVO';
 
   const cursosQuery = useQuery({
     queryKey: ['cursos', email],
@@ -72,10 +73,10 @@ export function AsistenciaPage() {
 
   const inscritosQuery = useQuery({
     queryKey: canViewAllByDefault
-      ? ['inscritos', { estado: 'CONFIRMADO', withRutaExtra: true, scope: 'all' }]
-      : ['inscritos', { estado: 'CONFIRMADO', withRutaExtra: true, idCurso: effectiveCourseId || null }],
+      ? ['inscritos', { estado: inscritosEstados, withRutaExtra: true, scope: 'all' }]
+      : ['inscritos', { estado: inscritosEstados, withRutaExtra: true, idCurso: effectiveCourseId || null }],
     queryFn: () => {
-      const u = new URLSearchParams({ estado: 'CONFIRMADO', withRutaExtra: 'true' });
+      const u = new URLSearchParams({ estado: inscritosEstados, withRutaExtra: 'true' });
       if (!canViewAllByDefault && effectiveCourseId) u.set('idCurso', effectiveCourseId);
       return getJson(`/api/inscritos?${u.toString()}`);
     },
