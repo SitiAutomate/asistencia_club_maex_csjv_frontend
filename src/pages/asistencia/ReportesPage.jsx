@@ -104,7 +104,7 @@ function SuccessModal({
   return (
     <div className="att-modal-backdrop" role="dialog" aria-modal="true">
       <div className="att-modal att-modal--excusa">
-        <div className="att-modal__head">
+        <div className="att-modal__head d-flex align-items-center justify-content-between gap-2">
           <h3 className="att-modal__title">Evaluación creada exitosamente.</h3>
           <button type="button" className="att-modal__close" onClick={onClose} aria-label="Cerrar">
             ×
@@ -112,6 +112,11 @@ function SuccessModal({
         </div>
         <div className="att-modal__body d-grid gap-3">
           <p className="mb-0 small text-muted">Puedes ver el PDF ahora o enviarlo por correo.</p>
+          {correoDestino ? (
+            <p className="mb-0 small text-muted">
+              Correo de destino: <span className="text-body">{correoDestino}</span>
+            </p>
+          ) : null}
           {ventanaCargando ? (
             <p className="mb-0 small text-muted">Comprobando si el envío por correo está permitido…</p>
           ) : null}
@@ -163,7 +168,7 @@ function EvalDetailModal({ open, evaluacion, onClose }) {
   return (
     <div className="att-modal-backdrop" role="dialog" aria-modal="true">
       <div className="att-modal" style={{ maxWidth: '920px' }}>
-        <div className="att-modal__head">
+        <div className="att-modal__head d-flex align-items-center justify-content-between gap-2">
           <h3 className="att-modal__title">{evaluacion.participante || 'Detalle evaluación'}</h3>
           <button type="button" className="att-modal__close" onClick={onClose} aria-label="Cerrar">
             ×
@@ -241,9 +246,15 @@ export function ReportesPage() {
     placeholderData: (prev) => prev,
   });
 
-  const cursos = cursosQuery.data?.cursos || [];
-  const effectiveCursoId = selectedCursoId || cursoId(cursos[0]) || '';
-  const selectedCurso = cursos.find((c) => cursoId(c) === effectiveCursoId) || null;
+  const cursos = useMemo(() => cursosQuery.data?.cursos ?? [], [cursosQuery.data]);
+  const effectiveCursoId = useMemo(
+    () => selectedCursoId || cursoId(cursos[0]) || '',
+    [selectedCursoId, cursos],
+  );
+  const selectedCurso = useMemo(
+    () => cursos.find((c) => cursoId(c) === effectiveCursoId) || null,
+    [cursos, effectiveCursoId],
+  );
 
   const inscritosQuery = useQuery({
     queryKey: ['reportes-inscritos', effectiveCursoId],

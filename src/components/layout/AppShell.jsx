@@ -5,7 +5,7 @@ import { getJson, setStoredToken } from '../../lib/api.js';
 import { queryClient } from '../../lib/queryClient.js';
 import { getEnabledNavItems } from '../../lib/navFeatures.js';
 import { IconClose, IconMenu } from '../asistencia/AttendanceIcons.jsx';
-import '../../styles/asistencia.css';
+import '../../styles/asistencia/index.css';
 
 const ROUTE_TITLES = {
   '/asistencia': 'Asistencia',
@@ -106,7 +106,7 @@ export function AppShell() {
         </div>
       </aside>
 
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+      <div className="flex-grow-1 d-flex flex-column min-w-0">
         <header className="att-header">
           <button
             type="button"

@@ -194,7 +194,7 @@ function RubricaModal({
   return (
     <div className="att-modal-backdrop" role="dialog" aria-modal="true">
       <div className="att-modal att-rubrica-modal">
-        <div className="att-rubrica-modal__head">
+        <div className="att-rubrica-modal__head d-flex align-items-center justify-content-between gap-2">
           <h3 className="att-rubrica-modal__title">{initialData?.id ? 'Editar rúbrica' : 'Nueva rúbrica'}</h3>
           <button type="button" className="att-rubrica-modal__close" onClick={onClose} aria-label="Cerrar modal">
             ×
@@ -339,7 +339,7 @@ function RubricaViewModal({ open, rubrica, onClose, onEdit }) {
   return (
     <div className="att-modal-backdrop" role="dialog" aria-modal="true">
       <div className="att-modal att-rubrica-modal">
-        <div className="att-rubrica-modal__head">
+        <div className="att-rubrica-modal__head d-flex align-items-center justify-content-between gap-2">
           <h3 className="att-rubrica-modal__title">Detalle de rúbrica</h3>
           <button type="button" className="att-rubrica-modal__close" onClick={onClose} aria-label="Cerrar modal">
             ×
@@ -788,7 +788,7 @@ export function GestionRubricasPage() {
       {confirmEstado ? (
         <div className="att-modal-backdrop" role="dialog" aria-modal="true">
           <div className="att-modal att-modal--excusa">
-            <div className="att-modal__head">
+            <div className="att-modal__head d-flex align-items-center justify-content-between gap-2">
               <h3 className="att-modal__title">Confirmar inactivación</h3>
               <button
                 type="button"

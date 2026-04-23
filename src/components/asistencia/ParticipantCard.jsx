@@ -48,13 +48,13 @@ export function ParticipantCard({
         <p className="att-card__curso">{curso || '—'}</p>
         <div className="att-card__meta">
           <div className="att-card__meta-row">
-            <span style={{ color: '#ca8a04' }} aria-hidden="true">
+            <span className="text-warning" aria-hidden="true">
               <IconRouteSmall />
             </span>
             <span>{ruta}</span>
           </div>
           <div className="att-card__meta-row">
-            <span style={{ color: '#7c3aed' }} aria-hidden="true">
+            <span className="text-primary" aria-hidden="true">
               <IconUsersSmall />
             </span>
             <span>{grupo}</span>

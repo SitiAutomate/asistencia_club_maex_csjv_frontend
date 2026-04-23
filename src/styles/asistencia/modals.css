@@ -1,0 +1,52 @@
+/* Modales */
+.att-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  z-index: 1070;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.att-modal {
+  position: relative;
+  z-index: 1;
+  background: #fff;
+  border-radius: 0.75rem;
+  width: 100%;
+  max-height: 90dvh;
+  overflow: auto;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+}
+
+.att-modal--excusa {
+  max-width: 30rem;
+}
+
+.att-modal__head {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.att-modal__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--bs-primary);
+}
+
+.att-modal__close {
+  border: none;
+  background: none;
+  color: #dc2626;
+  font-size: 1.9rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.1rem;
+}
+
+.att-modal__body {
+  padding: 1rem 1.25rem 1.25rem;
+}

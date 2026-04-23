@@ -14,7 +14,7 @@ export function ExcusaModal({ open, onClose, onConfirm, isPending, participantNa
       onClick={(e) => e.target === e.currentTarget && !isPending && onClose()}
     >
       <div className="att-modal att-modal--excusa" onClick={(e) => e.stopPropagation()}>
-        <div className="att-modal__head">
+        <div className="att-modal__head d-flex align-items-center justify-content-between gap-2">
           <h2 id="excusa-title" className="att-modal__title">
             Registrar excusa
           </h2>

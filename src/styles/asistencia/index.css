@@ -1,0 +1,6 @@
+/* Panel asistencia — import order matters (cascade / overrides). */
+@import './base.css';
+@import './sidebar.css';
+@import './modals.css';
+@import './components.css';
+@import './admin-informes.css';

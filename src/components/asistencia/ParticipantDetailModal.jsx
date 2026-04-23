@@ -51,7 +51,7 @@ export function ParticipantDetailModal({ open, onClose, inscrito }) {
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="att-modal" style={{ maxWidth: '48rem' }} onClick={(e) => e.stopPropagation()}>
-        <div className="att-modal__head">
+        <div className="att-modal__head d-flex align-items-center justify-content-between gap-2">
           <h2 id="detalle-title" className="att-modal__title">
             Información Participante
           </h2>
