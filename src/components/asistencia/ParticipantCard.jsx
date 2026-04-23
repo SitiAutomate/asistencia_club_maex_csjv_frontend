@@ -27,7 +27,7 @@ export function ParticipantCard({
   const grupo = getGrupo(inscrito);
   const activeReport = activeEntry?.reporte || null;
   const estadoNormalizado = String(estado || '').toUpperCase();
-  const canReport = estadoNormalizado === 'CONFIRMADO';
+  const canReport = estadoNormalizado === 'CONFIRMADO' || estadoNormalizado === 'ACTIVO';
 
   return (
     <article
