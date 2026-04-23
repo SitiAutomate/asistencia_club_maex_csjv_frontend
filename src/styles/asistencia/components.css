@@ -838,8 +838,8 @@
   }
 
   .att-course-dropdown {
-    left: auto;
-    right: 0;
+    left: 0;
+    right: auto;
     width: min(92vw, 26rem);
     max-width: calc(100vw - 1rem);
   }
