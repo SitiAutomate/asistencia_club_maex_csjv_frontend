@@ -266,6 +266,9 @@ export function ReportesPage() {
   });
 
   const participants = useMemo(() => inscritosQuery.data?.inscritos || [], [inscritosQuery.data]);
+  const participantsPanelLoading =
+    Boolean(effectiveCursoId) &&
+    (inscritosQuery.isPending || inscritosQuery.isPlaceholderData);
   const filteredCursos = useMemo(() => {
     const q = normalizeForSearch(courseSearch);
     if (!q) return cursos;
@@ -531,33 +534,43 @@ export function ReportesPage() {
             value={participantSearch}
             onChange={(e) => setParticipantSearch(e.target.value)}
           />
-          <div className="att-reportes-list">
-            {filteredParticipants.map((p) => {
-              const doc = getDocumento(p);
-              return (
-                <button
-                  key={doc}
-                  type="button"
-                  className={`att-reportes-item ${selectedDoc === doc ? 'is-active' : ''}`}
-                  onClick={() => {
-                    if (selectedDoc !== doc && hasDraftChanges) {
-                      const ok = window.confirm(
-                        '¿Está seguro/a que desea cambiar de participante? Se perderán todos los cambios que no se han guardado.',
-                      );
-                      if (!ok) return;
-                      resetDraft();
-                    }
-                    setSelectedDoc(doc);
-                    setSelectedEvalId(null);
-                    setDetailEval(null);
-                    setEditingEvalId(null);
-                    if (isNarrowViewport) setMobileEvalOpen(true);
-                  }}
-                >
-                  {getNombreCompleto(p)}
-                </button>
-              );
-            })}
+          <div
+            className={`att-reportes-list-wrap${participantsPanelLoading ? ' is-loading' : ''}`}
+          >
+            <div className="att-reportes-list" aria-busy={participantsPanelLoading}>
+              {filteredParticipants.map((p) => {
+                const doc = getDocumento(p);
+                return (
+                  <button
+                    key={doc}
+                    type="button"
+                    className={`att-reportes-item ${selectedDoc === doc ? 'is-active' : ''}`}
+                    onClick={() => {
+                      if (selectedDoc !== doc && hasDraftChanges) {
+                        const ok = window.confirm(
+                          '¿Está seguro/a que desea cambiar de participante? Se perderán todos los cambios que no se han guardado.',
+                        );
+                        if (!ok) return;
+                        resetDraft();
+                      }
+                      setSelectedDoc(doc);
+                      setSelectedEvalId(null);
+                      setDetailEval(null);
+                      setEditingEvalId(null);
+                      if (isNarrowViewport) setMobileEvalOpen(true);
+                    }}
+                  >
+                    {getNombreCompleto(p)}
+                  </button>
+                );
+              })}
+            </div>
+            {participantsPanelLoading ? (
+              <div className="att-reportes-list-loading" role="status" aria-live="polite">
+                <div className="spinner-border text-primary" aria-hidden="true" />
+                <span className="small text-muted">Cargando participantes…</span>
+              </div>
+            ) : null}
           </div>
         </aside>
 
