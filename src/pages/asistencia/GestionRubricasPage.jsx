@@ -379,6 +379,7 @@ export function GestionRubricasPage() {
 
   const [search, setSearch] = useState('');
   const [selectedCursoId, setSelectedCursoId] = useState('');
+  const [selectedLinea, setSelectedLinea] = useState('');
   const [selectedTipo, setSelectedTipo] = useState('');
   const [selectedEstado, setSelectedEstado] = useState('');
   const [page, setPage] = useState(1);
@@ -391,23 +392,10 @@ export function GestionRubricasPage() {
 
   const cursosQuery = useQuery({
     queryKey: ['rubricas-cursos', email, isAdmin],
-    queryFn: async () => {
-      if (isAdmin) {
-        const full = await getJson('/api/rubricas?scope=all');
-        const map = new Map();
-        toRows(full).forEach((r) => {
-          const id = String(r.categoria || '').trim();
-          if (!id || map.has(id)) return;
-          map.set(id, {
-            ID_Curso: id,
-            Nombre_del_curso: r.nombreCategoria || `Curso ${id}`,
-            Actividad: r.actividad || '',
-          });
-        });
-        return { cursos: [...map.values()] };
-      }
-      return getJson(`/api/cursos?correo=${encodeURIComponent(email)}&soloMisCursos=true`);
-    },
+    queryFn: () =>
+      isAdmin
+        ? getJson('/api/cursos?scope=all')
+        : getJson(`/api/cursos?correo=${encodeURIComponent(email)}&soloMisCursos=true`),
     enabled: Boolean(email),
   });
 
@@ -491,7 +479,23 @@ export function GestionRubricasPage() {
   };
 
   const cursos = useMemo(() => cursosQuery.data?.cursos || [], [cursosQuery.data]);
+  const cursosFiltradosPorLinea = useMemo(() => {
+    if (!selectedLinea) return cursos;
+    return cursos.filter((c) => String(c?.Nombre_Linea || '').trim() === selectedLinea);
+  }, [cursos, selectedLinea]);
+  const cursoById = useMemo(
+    () => new Map(cursos.map((c) => [cursoId(c), c])),
+    [cursos],
+  );
   const rubricas = useMemo(() => toRows(rubricasQuery.data), [rubricasQuery.data]);
+  const lineaOptions = useMemo(() => {
+    const set = new Set();
+    cursos.forEach((c) => {
+      const nombre = String(c?.Nombre_Linea || '').trim();
+      if (nombre) set.add(nombre);
+    });
+    return [...set].sort((a, b) => a.localeCompare(b, 'es'));
+  }, [cursos]);
 
   const filtered = useMemo(() => {
     const q = normalizeForSearch(search);
@@ -500,13 +504,18 @@ export function GestionRubricasPage() {
         const curso = cursos.find((c) => cursoId(c) === selectedCursoId);
         if (!curso || !r.comun || String(r.actividad || '') !== String(curso?.Actividad || '')) return false;
       }
+      if (selectedLinea) {
+        const cursoRubrica = cursoById.get(String(r.categoria || '').trim());
+        const nombreLinea = String(cursoRubrica?.Nombre_Linea || '').trim();
+        if (nombreLinea !== selectedLinea) return false;
+      }
       if (selectedTipo && normalizeForSearch(r.tipo) !== normalizeForSearch(selectedTipo)) return false;
       if (selectedEstado && normalizeForSearch(r.estado) !== normalizeForSearch(selectedEstado)) return false;
       if (!q) return true;
       const blob = normalizeForSearch(`${r.nombre} ${r.tipo} ${r.descripcion} ${r.nombreCategoria} ${r.estado}`);
       return blob.includes(q);
     });
-  }, [rubricas, search, selectedCursoId, selectedTipo, selectedEstado, cursos]);
+  }, [rubricas, search, selectedCursoId, selectedLinea, selectedTipo, selectedEstado, cursos, cursoById]);
 
   const tipoOptions = useMemo(() => {
     const set = new Set();
@@ -538,7 +547,7 @@ export function GestionRubricasPage() {
   }
 
   return (
-    <div className="att-main">
+    <div className="att-main att-main--wide att-rubricas-page">
       <div className="att-history-card">
         <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
           <h2 className="h4 m-0 fw-bold" style={{ color: '#3d8dd4' }}>
@@ -572,9 +581,28 @@ export function GestionRubricasPage() {
             />
           </div>
           <div>
+            <label className="form-label small fw-semibold mb-1">Línea:</label>
+            <select
+              className="form-select form-select-sm"
+              value={selectedLinea}
+              onChange={(e) => {
+                setSelectedLinea(e.target.value);
+                setSelectedCursoId('');
+                setPage(1);
+              }}
+            >
+              <option value="">Todas</option>
+              {lineaOptions.map((linea) => (
+                <option key={linea} value={linea}>
+                  {linea}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
             <label className="form-label small fw-semibold mb-1">Curso:</label>
             <CursoSearchSelect
-              cursos={cursos}
+              cursos={cursosFiltradosPorLinea}
               value={selectedCursoId}
               onChange={(next) => {
                 setSelectedCursoId(next);

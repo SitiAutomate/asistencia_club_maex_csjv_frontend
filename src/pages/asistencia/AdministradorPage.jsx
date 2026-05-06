@@ -113,6 +113,7 @@ export function AdministradorPage() {
   const [fechaFin, setFechaFin] = useState('');
   const [anio, setAnio] = useState(yearActual);
   const [categoria, setCategoria] = useState('');
+  const [linea, setLinea] = useState('');
   const [categoriaOpen, setCategoriaOpen] = useState(false);
   const [categoriaSearch, setCategoriaSearch] = useState('');
   const [entrenador, setEntrenador] = useState('');
@@ -123,6 +124,7 @@ export function AdministradorPage() {
     fechaFin: '',
     anio: yearActual,
     categoria: '',
+    linea: '',
     entrenador: '',
     estado: 'todos',
   });
@@ -140,6 +142,7 @@ export function AdministradorPage() {
       if (applied.fechaFin) u.set('fechaFin', applied.fechaFin);
       if (applied.anio) u.set('anio', applied.anio);
       if (applied.categoria) u.set('categoria', applied.categoria);
+      if (applied.linea) u.set('linea', applied.linea);
       if (applied.entrenador) u.set('entrenador', applied.entrenador);
       if (applied.estado && applied.estado !== 'todos') u.set('estado', applied.estado);
       return getJson(`/api/admin/informes/resumen?${u.toString()}`);
@@ -171,6 +174,7 @@ export function AdministradorPage() {
       if (applied.fechaFin) u.set('fechaFin', applied.fechaFin);
       if (applied.anio) u.set('anio', applied.anio);
       if (applied.categoria) u.set('categoria', applied.categoria);
+      if (applied.linea) u.set('linea', applied.linea);
       if (applied.entrenador) u.set('entrenador', applied.entrenador);
       if (applied.estado && applied.estado !== 'todos') u.set('estado', applied.estado);
       return getJson(`/api/admin/informes?${u.toString()}`);
@@ -188,6 +192,7 @@ export function AdministradorPage() {
       if (applied.fechaFin) u.set('fechaFin', applied.fechaFin);
       if (applied.anio) u.set('anio', applied.anio);
       if (applied.categoria) u.set('categoria', applied.categoria);
+      if (applied.linea) u.set('linea', applied.linea);
       if (applied.entrenador) u.set('entrenador', applied.entrenador);
       if (applied.estado && applied.estado !== 'todos') u.set('estado', applied.estado);
       return getJson(`/api/admin/informes/grafico-categorias?${u.toString()}`);
@@ -216,6 +221,7 @@ export function AdministradorPage() {
       fechaFin: fechaFin.trim(),
       anio: String(anio || '').trim(),
       categoria: categoria.trim(),
+      linea: linea.trim(),
       entrenador: entrenador.trim(),
       estado,
     });
@@ -228,6 +234,7 @@ export function AdministradorPage() {
     setFechaFin('');
     setAnio(yearActual);
     setCategoria('');
+    setLinea('');
     setCategoriaOpen(false);
     setCategoriaSearch('');
     setEntrenador('');
@@ -237,6 +244,7 @@ export function AdministradorPage() {
       fechaFin: '',
       anio: yearActual,
       categoria: '',
+      linea: '',
       entrenador: '',
       estado: 'todos',
     });
@@ -251,13 +259,24 @@ export function AdministradorPage() {
   const r = resumenQuery.data || {};
   const statsLoading = resumenQuery.isLoading || resumenQuery.isFetching;
   const categorias = metaQuery.data?.categorias || [];
+  const lineas = useMemo(() => {
+    const set = new Set();
+    categorias.forEach((c) => {
+      const nombre = String(c?.nombreLinea || '').trim();
+      if (nombre) set.add(nombre);
+    });
+    return [...set].sort((a, b) => a.localeCompare(b, 'es'));
+  }, [categorias]);
   const entrenadores = metaQuery.data?.entrenadores || [];
   const categoriaActual = categorias.find((c) => c.id === categoria) || null;
   const categoriasFiltradas = useMemo(() => {
     const q = normalizeForSearch(categoriaSearch);
-    if (!q) return categorias;
-    return categorias.filter((c) => normalizeForSearch(`${c.nombre} ${c.id}`).includes(q));
-  }, [categorias, categoriaSearch]);
+    const porLinea = !linea
+      ? categorias
+      : categorias.filter((c) => String(c?.nombreLinea || '').trim() === linea);
+    if (!q) return porLinea;
+    return porLinea.filter((c) => normalizeForSearch(`${c.nombre} ${c.id}`).includes(q));
+  }, [categorias, categoriaSearch, linea]);
 
   return (
     <div className="att-main att-main--wide att-admin-page">
@@ -392,6 +411,29 @@ export function AdministradorPage() {
                   </div>
                 ) : null}
               </div>
+            </div>
+            <div className="col-12 col-md-6 col-lg-3">
+              <label className="form-label small mb-1 att-admin-filter-label">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true">
+                  <path d="M4 7h16M4 12h10M4 17h7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+                Línea
+              </label>
+              <select
+                className="form-select form-select-sm"
+                value={linea}
+                onChange={(e) => {
+                  setLinea(e.target.value);
+                  setCategoria('');
+                }}
+              >
+                <option value="">Todas las líneas</option>
+                {lineas.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="col-12 col-md-6 col-lg-3">
               <label className="form-label small mb-1 att-admin-filter-label">

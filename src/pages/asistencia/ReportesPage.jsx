@@ -223,6 +223,7 @@ export function ReportesPage() {
   const [courseOpen, setCourseOpen] = useState(false);
   const [courseSearch, setCourseSearch] = useState('');
   const coursePickerRef = useRef(null);
+  const envioPollTimersRef = useRef(new Map());
 
   const isNarrowViewport = useMediaQuery('(max-width: 767px)');
 
@@ -230,10 +231,57 @@ export function ReportesPage() {
   const testEmail = import.meta.env.VITE_TEST_EMAIL || email || 'correo.prueba@club.local';
 
   useEffect(() => {
+    const pollTimers = envioPollTimersRef.current;
     return () => {
       revokeObjectUrlIfBlob(previewUrl);
+      pollTimers.forEach((timerId) => window.clearInterval(timerId));
+      pollTimers.clear();
     };
   }, [previewUrl]);
+
+  const startEnvioStatusPolling = ({ identificacion, evaluacionId }) => {
+    const doc = String(identificacion || '').trim();
+    const evalId = Number(evaluacionId);
+    if (!doc || !Number.isFinite(evalId)) return;
+    if (envioPollTimersRef.current.has(evalId)) return;
+
+    let attempts = 0;
+    const maxAttempts = 24;
+    const intervalMs = 2500;
+
+    const clearSelf = () => {
+      const timer = envioPollTimersRef.current.get(evalId);
+      if (timer) window.clearInterval(timer);
+      envioPollTimersRef.current.delete(evalId);
+    };
+
+    const tick = async () => {
+      attempts += 1;
+      try {
+        const data = await getJson(`/api/evaluaciones/participante/${encodeURIComponent(doc)}`);
+        queryClient.setQueryData(['reportes-evals', doc], data);
+        const rows = data?.evaluaciones || [];
+        const updated = rows.find((row) => Number(row.id) === evalId);
+        if (updated?.enviado) {
+          setDetailEval((d) => (d && Number(d.id) === evalId ? { ...d, ...updated } : d));
+          setSuccessData((s) => (s && Number(s.id) === evalId ? { ...s, ...updated } : s));
+          setToastState({ show: true, type: 'success', message: 'Informe enviado correctamente.' });
+          window.setTimeout(() => setToastState((prev) => ({ ...prev, show: false })), 2200);
+          clearSelf();
+          return;
+        }
+      } catch {
+        // Si una consulta puntual falla, mantenemos el polling hasta el límite.
+      }
+      if (attempts >= maxAttempts) {
+        clearSelf();
+      }
+    };
+
+    tick();
+    const timerId = window.setInterval(tick, intervalMs);
+    envioPollTimersRef.current.set(evalId, timerId);
+  };
 
   const cursosQuery = useQuery({
     queryKey: ['reportes-cursos', email, isAdmin],
@@ -441,8 +489,17 @@ export function ReportesPage() {
       }
       setDetailEval((d) => (d && Number(d.id) === Number(updated?.id) ? { ...d, ...updated } : d));
       setSuccessData((s) => (s && Number(s.id) === Number(updated?.id) ? { ...s, ...updated } : s));
-      setToastState({ show: true, type: 'success', message: 'Informe enviado correctamente.' });
+      setToastState({
+        show: true,
+        type: 'success',
+        message: 'Correo en cola. El estado se actualizará en unos momentos.',
+      });
       window.setTimeout(() => setToastState((prev) => ({ ...prev, show: false })), 2200);
+
+      const queuedEvalId = Number(updated?.id || data?.evaluacionId || variables?.id);
+      if (docKey && Number.isFinite(queuedEvalId)) {
+        startEnvioStatusPolling({ identificacion: docKey, evaluacionId: queuedEvalId });
+      }
     },
     onError: (error) => {
       setToastState({ show: true, type: 'danger', message: error?.message || 'No se pudo enviar el informe' });
