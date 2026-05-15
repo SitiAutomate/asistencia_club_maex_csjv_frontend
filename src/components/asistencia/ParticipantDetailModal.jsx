@@ -6,19 +6,9 @@ import {
   getParticipante,
   getRutaLabel,
 } from '../../lib/inscritoHelpers.js';
+import { formatFechaCorta } from '../../lib/formatDate.js';
 import { mailtoHref, telHref, whatsappHref } from '../../lib/phoneLinks.js';
 import { IconWhatsApp } from './AttendanceIcons.jsx';
-
-function formatDate(iso) {
-  if (!iso) return '—';
-  try {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return String(iso);
-    return d.toLocaleDateString('es-CO', { year: 'numeric', month: '2-digit', day: '2-digit' });
-  } catch {
-    return String(iso);
-  }
-}
 
 function InfoRow({ label, children }) {
   return (
@@ -63,7 +53,7 @@ export function ParticipantDetailModal({ open, onClose, inscrito }) {
           <div className="att-info-grid">
             <InfoRow label="Nombre">{getNombreCompleto(inscrito)}</InfoRow>
             <InfoRow label="Documento">{getDocumento(inscrito)}</InfoRow>
-            <InfoRow label="Fecha de Nacimiento">{formatDate(p?.fechaNacimiento)}</InfoRow>
+            <InfoRow label="Fecha de Nacimiento">{formatFechaCorta(p?.fechaNacimiento)}</InfoRow>
             <InfoRow label="Curso">{getCursoNombre(inscrito)}</InfoRow>
             <InfoRow label="Grupo">{getGrupo(inscrito)}</InfoRow>
             <InfoRow label="Ruta">{getRutaLabel(inscrito)}</InfoRow>

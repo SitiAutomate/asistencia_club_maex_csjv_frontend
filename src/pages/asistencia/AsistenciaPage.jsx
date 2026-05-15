@@ -4,7 +4,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { getJson, postJson } from '../../lib/api.js';
 import { queryClient } from '../../lib/queryClient.js';
 import { getDefaultAppPath, isNavKeyEnabled } from '../../lib/navFeatures.js';
-import { matchesParticipantName, normalizeForSearch } from '../../lib/normalizeSearch.js';
+import { matchesParticipantSearch, normalizeForSearch } from '../../lib/normalizeSearch.js';
 import {
   buildAsistenciaBody,
   getDocumento,
@@ -127,7 +127,7 @@ export function AsistenciaPage() {
       ? list.filter((i) => String(getIdCurso(i) || '').trim() === String(selectedFilterCourseId).trim())
       : list;
     const byName = byCourse
-      .filter((i) => matchesParticipantName(getNombreCompleto(i), search))
+      .filter((i) => matchesParticipantSearch(i, search))
       .sort((a, b) =>
         getNombreCompleto(a).localeCompare(getNombreCompleto(b), 'es', {
           sensitivity: 'base',
@@ -271,7 +271,7 @@ export function AsistenciaPage() {
           <input
             type="search"
             className="att-search-input"
-            placeholder="Buscar participante..."
+            placeholder="Buscar por nombre, documento, curso, grupo, ruta..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             aria-label="Buscar participante"

@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getJson } from '../../lib/api.js';
 import { getDefaultAppPath, isNavKeyEnabled } from '../../lib/navFeatures.js';
 import { getCursoNombre, getDocumento, getNombreCompleto, getParticipante } from '../../lib/inscritoHelpers.js';
+import { formatFechaCorta } from '../../lib/formatDate.js';
 import { normalizeForSearch } from '../../lib/normalizeSearch.js';
 
 function cursoId(c) {
@@ -12,13 +13,6 @@ function cursoId(c) {
 
 function cursoLabel(c) {
   return c?.Nombre_del_curso || c?.nombre_del_curso || c?.Nombre_Corto_Curso || c?.nombre_corto_curso || '';
-}
-
-function fmtFechaCorta(value) {
-  if (!value) return '—';
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return String(value).slice(0, 10);
-  return d.toLocaleDateString('es-CO');
 }
 
 function toCsvValue(value) {
