@@ -45,7 +45,7 @@ function exportInfoCsv(rows) {
         getDocumento(inscrito),
         getCursoNombre(inscrito),
         p?.grupo || '',
-        fmtFechaCorta(p?.fechaNacimiento),
+        formatFechaCorta(p?.fechaNacimiento),
         padreInfo?.nombreMadre || '',
         padreInfo?.celularMadre || '',
         padreInfo?.emailMadre || '',
@@ -305,7 +305,7 @@ export function InformacionPage() {
                       <td data-label="Documento">{getDocumento(inscrito) || '—'}</td>
                       <td data-label="Curso">{getCursoNombre(inscrito) || '—'}</td>
                       <td data-label="Grupo">{p?.grupo || '—'}</td>
-                      <td data-label="F. Nacimiento">{fmtFechaCorta(p?.fechaNacimiento)}</td>
+                      <td data-label="F. Nacimiento">{formatFechaCorta(p?.fechaNacimiento)}</td>
                       <td data-label="Madre">{padreInfo?.nombreMadre || '—'}</td>
                       <td data-label="Tel. Madre">{padreInfo?.celularMadre || '—'}</td>
                       <td data-label="Email Madre">{padreInfo?.emailMadre || '—'}</td>

@@ -3,7 +3,7 @@ import { Navigate, useOutletContext } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getJson } from '../../lib/api.js';
 import { getDefaultAppPath, isNavKeyEnabled } from '../../lib/navFeatures.js';
-import { formatFechaCorta } from '../../lib/formatDate.js';
+import { formatFechaCorta, parseFechaCalendarioLocal } from '../../lib/formatDate.js';
 import { normalizeForSearch } from '../../lib/normalizeSearch.js';
 
 function fmtFecha(v) {
