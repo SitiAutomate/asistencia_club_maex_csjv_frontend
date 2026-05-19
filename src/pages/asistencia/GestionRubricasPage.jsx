@@ -155,6 +155,7 @@ function RubricaModal({
   initialData,
   isPending,
   canUseComun,
+  actividadesLider = [],
   cursos = [],
 }) {
   const isEditing = Boolean(initialData?.id);
@@ -163,6 +164,7 @@ function RubricaModal({
     tipo: initialData?.tipo || '',
     descripcion: initialData?.descripcion || '',
     categoria: String(initialData?.categoria || ''),
+    actividad: String(initialData?.actividad || ''),
     alto: initialData?.alto || '',
     medio: initialData?.medio || '',
     bajo: initialData?.bajo || '',
@@ -170,11 +172,51 @@ function RubricaModal({
     estado: initialData?.estado || 'ACTIVO',
   }));
 
-  if (!open) return null;
+  const isComun = canUseComun && form.comun;
   const selectedCurso = cursos.find((c) => cursoId(c) === form.categoria);
+  const actividadOptions = useMemo(() => {
+    const set = new Set(actividadesLider.map((a) => String(a)));
+    cursos.forEach((c) => {
+      if (c?.Actividad !== null && c?.Actividad !== undefined) set.add(String(c.Actividad));
+    });
+    return [...set].sort((a, b) => a.localeCompare(b, 'es', { numeric: true }));
+  }, [actividadesLider, cursos]);
+  const needsActividadSelect = isComun && actividadOptions.length > 1;
+
+  if (!open) return null;
+
+  const resolveActividad = () => {
+    if (selectedCurso?.Actividad !== null && selectedCurso?.Actividad !== undefined) {
+      return String(selectedCurso.Actividad);
+    }
+    if (form.actividad) return String(form.actividad);
+    if (actividadesLider.length === 1) return String(actividadesLider[0]);
+    if (actividadOptions.length === 1) return actividadOptions[0];
+    return String(initialData?.actividad ?? '').trim();
+  };
 
   const submit = (e) => {
     e.preventDefault();
+    const actividad = resolveActividad();
+
+    if (isComun) {
+      if (!actividad) return;
+      onSubmit({
+        nombre: form.nombre.trim(),
+        tipo: form.tipo.trim(),
+        descripcion: form.descripcion.trim(),
+        categoria: selectedCurso ? cursoId(selectedCurso) : '',
+        nombreCategoria: selectedCurso ? cursoLabel(selectedCurso) : 'Todas las categorías',
+        alto: form.alto.trim(),
+        medio: form.medio.trim(),
+        bajo: form.bajo.trim(),
+        actividad,
+        comun: 1,
+        estado: form.estado || 'ACTIVO',
+      });
+      return;
+    }
+
     if (!selectedCurso) return;
     onSubmit({
       nombre: form.nombre.trim(),
@@ -185,8 +227,8 @@ function RubricaModal({
       alto: form.alto.trim(),
       medio: form.medio.trim(),
       bajo: form.bajo.trim(),
-      actividad: String(selectedCurso?.Actividad ?? initialData?.actividad ?? '').trim(),
-      comun: canUseComun ? (form.comun ? 1 : 0) : 0,
+      actividad,
+      comun: 0,
       estado: form.estado || 'ACTIVO',
     });
   };
@@ -244,18 +286,72 @@ function RubricaModal({
                   ))}
                 </select>
               </label>
+              <div className="att-rubrica-common-box att-rubrica-form__full">
+                <label className="d-flex align-items-start gap-2 m-0">
+                  <input
+                    type="checkbox"
+                    checked={form.comun}
+                    disabled={!canUseComun}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setForm((prev) => ({
+                        ...prev,
+                        comun: checked,
+                        categoria: checked ? '' : prev.categoria,
+                        actividad:
+                          checked && actividadesLider.length === 1
+                            ? String(actividadesLider[0])
+                            : prev.actividad,
+                      }));
+                    }}
+                    className="form-check-input mt-1"
+                  />
+                  <span>Rúbrica común (aplica para todas las categorías de la actividad)</span>
+                </label>
+                {!canUseComun ? (
+                  <div className="small text-muted mt-1">
+                    Solo administradores y líderes pueden crear rúbricas comunes.
+                  </div>
+                ) : null}
+              </div>
               <label className="form-label fw-semibold mb-1 att-rubrica-form__full">
-                Categoría *
+                {isComun ? (
+                  <>
+                    Categoría <span className="fw-normal text-muted">(opcional)</span>
+                  </>
+                ) : (
+                  'Categoría *'
+                )}
                 <div className="mt-1">
                   <CursoSearchSelect
                     cursos={cursos}
                     value={form.categoria}
                     onChange={(next) => setForm((prev) => ({ ...prev, categoria: next }))}
-                    placeholder="Seleccionar categoría..."
+                    placeholder={
+                      isComun ? 'Opcional: asociar a una categoría...' : 'Seleccionar categoría...'
+                    }
                     allowAll={false}
                   />
                 </div>
               </label>
+              {needsActividadSelect ? (
+                <label className="form-label fw-semibold mb-1 att-rubrica-form__full">
+                  Actividad *
+                  <select
+                    className="form-select mt-1"
+                    value={form.actividad}
+                    onChange={(e) => setForm((prev) => ({ ...prev, actividad: e.target.value }))}
+                    required
+                  >
+                    <option value="">Seleccionar actividad...</option>
+                    {actividadOptions.map((act) => (
+                      <option key={act} value={act}>
+                        Actividad {act}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
             </div>
             <label className="form-label fw-semibold mb-1">
               Descripción
@@ -267,21 +363,6 @@ function RubricaModal({
                 maxLength={1000}
               />
             </label>
-            <div className="att-rubrica-common-box">
-              <label className="d-flex align-items-start gap-2 m-0">
-                <input
-                  type="checkbox"
-                  checked={form.comun}
-                  disabled={!canUseComun}
-                  onChange={(e) => setForm((prev) => ({ ...prev, comun: e.target.checked }))}
-                  className="form-check-input mt-1"
-                />
-                <span>Rúbrica común (aplica para todas las categorías de la actividad)</span>
-              </label>
-              {!canUseComun ? (
-                <div className="small text-muted mt-1">Solo administradores y líderes pueden crear rúbricas comunes.</div>
-              ) : null}
-            </div>
           </section>
 
           <section className="att-rubrica-form__section">
@@ -409,11 +490,12 @@ export function GestionRubricasPage() {
     enabled: Boolean(email),
   });
 
-  const canUseComun = useMemo(() => {
-    if (isAdmin) return true;
-    const rows = toRows(rubricasQuery.data);
-    return rows.some((r) => String(r.responsable || '').toLowerCase() === email.toLowerCase() && r.comun);
-  }, [isAdmin, rubricasQuery.data, email]);
+  const esLider = Boolean(cursosQuery.data?.esLider);
+  const actividadesLider = useMemo(
+    () => (Array.isArray(cursosQuery.data?.actividadesLider) ? cursosQuery.data.actividadesLider : []),
+    [cursosQuery.data],
+  );
+  const canUseComun = isAdmin || esLider;
 
   const saveMutation = useMutation({
     mutationFn: (body) => {
@@ -801,6 +883,7 @@ export function GestionRubricasPage() {
         initialData={editing}
         isPending={saveMutation.isPending}
         canUseComun={canUseComun}
+        actividadesLider={actividadesLider}
         cursos={cursos}
       />
       <RubricaViewModal
