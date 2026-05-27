@@ -47,6 +47,11 @@ const ESTADOS_FILTRO = [
   { value: 'no_enviado', label: 'No enviado' },
 ];
 
+function getPeriodoActual() {
+  const mes = new Date().getMonth() + 1;
+  return mes <= 7 ? 'ene_jul' : 'ago_dic';
+}
+
 function StatIcon({ type }) {
   if (type === 'total') {
     return (
@@ -108,7 +113,9 @@ export function AdministradorPage() {
     (_, idx) => String(firstYear + idx),
   );
   const yearActual = currentYear;
+  const periodoActual = getPeriodoActual();
 
+  const [periodo, setPeriodo] = useState(periodoActual);
   const [fechaInicio, setFechaInicio] = useState('');
   const [fechaFin, setFechaFin] = useState('');
   const [anio, setAnio] = useState(yearActual);
@@ -120,6 +127,7 @@ export function AdministradorPage() {
   const [estado, setEstado] = useState('todos');
 
   const [applied, setApplied] = useState({
+    periodo: periodoActual,
     fechaInicio: '',
     fechaFin: '',
     anio: yearActual,
@@ -141,6 +149,7 @@ export function AdministradorPage() {
       if (applied.fechaInicio) u.set('fechaInicio', applied.fechaInicio);
       if (applied.fechaFin) u.set('fechaFin', applied.fechaFin);
       if (applied.anio) u.set('anio', applied.anio);
+      if (applied.periodo) u.set('periodo', applied.periodo);
       if (applied.categoria) u.set('categoria', applied.categoria);
       if (applied.linea) u.set('linea', applied.linea);
       if (applied.entrenador) u.set('entrenador', applied.entrenador);
@@ -173,6 +182,7 @@ export function AdministradorPage() {
       if (applied.fechaInicio) u.set('fechaInicio', applied.fechaInicio);
       if (applied.fechaFin) u.set('fechaFin', applied.fechaFin);
       if (applied.anio) u.set('anio', applied.anio);
+      if (applied.periodo) u.set('periodo', applied.periodo);
       if (applied.categoria) u.set('categoria', applied.categoria);
       if (applied.linea) u.set('linea', applied.linea);
       if (applied.entrenador) u.set('entrenador', applied.entrenador);
@@ -191,6 +201,7 @@ export function AdministradorPage() {
       if (applied.fechaInicio) u.set('fechaInicio', applied.fechaInicio);
       if (applied.fechaFin) u.set('fechaFin', applied.fechaFin);
       if (applied.anio) u.set('anio', applied.anio);
+      if (applied.periodo) u.set('periodo', applied.periodo);
       if (applied.categoria) u.set('categoria', applied.categoria);
       if (applied.linea) u.set('linea', applied.linea);
       if (applied.entrenador) u.set('entrenador', applied.entrenador);
@@ -217,6 +228,7 @@ export function AdministradorPage() {
 
   const aplicarFiltros = () => {
     setApplied({
+      periodo: periodo || periodoActual,
       fechaInicio: fechaInicio.trim(),
       fechaFin: fechaFin.trim(),
       anio: String(anio || '').trim(),
@@ -230,6 +242,7 @@ export function AdministradorPage() {
   };
 
   const limpiarFiltros = () => {
+    setPeriodo(periodoActual);
     setFechaInicio('');
     setFechaFin('');
     setAnio(yearActual);
@@ -240,6 +253,7 @@ export function AdministradorPage() {
     setEntrenador('');
     setEstado('todos');
     setApplied({
+      periodo: periodoActual,
       fechaInicio: '',
       fechaFin: '',
       anio: yearActual,
@@ -308,9 +322,9 @@ export function AdministradorPage() {
           <span className="att-admin-stat-card__icon" aria-hidden="true">
             <StatIcon type="missingMonth" />
           </span>
-          <span className="att-admin-stat-card__label">Sin informe (mes actual)</span>
+          <span className="att-admin-stat-card__label">Sin informe (periodo)</span>
           <strong className="att-admin-stat-card__value">
-            {statsLoading ? '…' : r.participantesSinInformeMesActual ?? '—'}
+            {statsLoading ? '…' : r.participantesSinInformePeriodo ?? '—'}
           </strong>
         </article>
       </div>
@@ -319,6 +333,18 @@ export function AdministradorPage() {
         <div className="card-body">
           <h3 className="h6 fw-bold mb-3">Filtros de búsqueda</h3>
           <div className="row g-2 g-md-3 align-items-end">
+            <div className="col-12 col-md-6 col-lg-3">
+              <label className="form-label small mb-1 att-admin-filter-label">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true">
+                  <path d="M5 7h14M7 4v6M17 4v6M5 10h14v10H5z" stroke="currentColor" strokeWidth="1.8" />
+                </svg>
+                Periodo
+              </label>
+              <select className="form-select form-select-sm" value={periodo} onChange={(e) => setPeriodo(e.target.value)}>
+                <option value="ene_jul">Enero - Julio</option>
+                <option value="ago_dic">Agosto - Diciembre</option>
+              </select>
+            </div>
             <div className="col-12 col-md-6 col-lg-3">
               <label className="form-label small mb-1 att-admin-filter-label">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true">
