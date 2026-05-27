@@ -1,3 +1,6 @@
+const LOGO_VERSION = String(import.meta.env.VITE_BRANDING_VERSION || '1').trim();
+const LOGO_SRC = `/branding/logo-club.png?v=${encodeURIComponent(LOGO_VERSION)}`;
+
 export function AuthShell({ children }) {
   return (
     <div className="auth-page d-flex align-items-center">
@@ -5,7 +8,7 @@ export function AuthShell({ children }) {
         <div className="card-body p-4 p-sm-5">
           <header className="text-center mb-4">
             <img
-              src="/branding/logo-club.png"
+              src={LOGO_SRC}
               alt="Club Deportivo San José de Las Vegas"
               className="auth-logo d-block mx-auto"
               width={220}

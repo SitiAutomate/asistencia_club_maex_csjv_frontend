@@ -7,6 +7,9 @@ import { getEnabledNavItems } from '../../lib/navFeatures.js';
 import { IconClose, IconMenu } from '../asistencia/AttendanceIcons.jsx';
 import '../../styles/asistencia/index.css';
 
+const LOGO_VERSION = String(import.meta.env.VITE_BRANDING_VERSION || '1').trim();
+const LOGO_SRC = `/branding/logo-club.png?v=${encodeURIComponent(LOGO_VERSION)}`;
+
 const ROUTE_TITLES = {
   '/asistencia': 'Asistencia',
   '/historial': 'Historial',
@@ -118,7 +121,7 @@ export function AppShell() {
           </button>
           <div className="att-header__logos">
             <img
-              src="/branding/logo-club.png"
+              src={LOGO_SRC}
               alt=""
               height={32}
               onError={(e) => {
