@@ -428,6 +428,7 @@ export function ReportesPage() {
       form.append('nombreCategoria', cursoLabel(selectedCurso));
       form.append('comentario', comentario);
       form.append('enviado', 'false');
+      if (editingEvalId) form.append('evaluacionId', String(editingEvalId));
       if (fotoFile) form.append('foto', fotoFile);
       form.append(
         'rubricas',
