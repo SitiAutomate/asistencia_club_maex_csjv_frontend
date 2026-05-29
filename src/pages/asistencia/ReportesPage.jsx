@@ -8,6 +8,8 @@ import { normalizeForSearch } from '../../lib/normalizeSearch.js';
 import { queryClient } from '../../lib/queryClient.js';
 import { informeYaEnviadoHoyColombia } from '../../lib/informeEnvioColombia.js';
 
+const REPORTES_INSCRITOS_ESTADOS = 'CONFIRMADO,ACTIVO,INCAPACITADO';
+
 function cursoId(curso) {
   return String(curso?.ID_Curso ?? '').trim();
 }
@@ -219,6 +221,7 @@ export function ReportesPage() {
   const [toastState, setToastState] = useState({ show: false, type: 'success', message: '' });
   const [previewUrl, setPreviewUrl] = useState('');
   const [editingEvalId, setEditingEvalId] = useState(null);
+  const [editingFotoPath, setEditingFotoPath] = useState('');
   const [mobileEvalOpen, setMobileEvalOpen] = useState(false);
   const [courseOpen, setCourseOpen] = useState(false);
   const [courseSearch, setCourseSearch] = useState('');
@@ -305,9 +308,11 @@ export function ReportesPage() {
   );
 
   const inscritosQuery = useQuery({
-    queryKey: ['reportes-inscritos', effectiveCursoId],
+    queryKey: ['reportes-inscritos', effectiveCursoId, REPORTES_INSCRITOS_ESTADOS],
     queryFn: () =>
-      getJson(`/api/inscritos?estado=CONFIRMADO&withRutaExtra=true&lite=true&idCurso=${encodeURIComponent(effectiveCursoId)}`),
+      getJson(
+        `/api/inscritos?estado=${encodeURIComponent(REPORTES_INSCRITOS_ESTADOS)}&withRutaExtra=true&lite=true&idCurso=${encodeURIComponent(effectiveCursoId)}`,
+      ),
     enabled: Boolean(effectiveCursoId),
     placeholderData: (prev) => prev,
     staleTime: 45_000,
@@ -376,6 +381,7 @@ export function ReportesPage() {
     setPreviewUrl('');
     setNiveles({});
     setEditingEvalId(null);
+    setEditingFotoPath('');
   };
 
   const startEditEvaluation = (evaluacion) => {
@@ -384,7 +390,9 @@ export function ReportesPage() {
     setComentario(String(evaluacion.comentario || ''));
     setFotoFile(null);
     revokeObjectUrlIfBlob(previewUrl);
-    setPreviewUrl(evaluacionFotoSrc(evaluacion.foto));
+    const fotoGuardada = String(evaluacion.foto || '').trim();
+    setEditingFotoPath(fotoGuardada);
+    setPreviewUrl(evaluacionFotoSrc(fotoGuardada));
     const nextLevels = {};
     (evaluacion.detalles || []).forEach((d) => {
       nextLevels[d.id_rubrica] = nivelFromDb(d.valor);
@@ -416,7 +424,7 @@ export function ReportesPage() {
   }, [courseOpen]);
 
   const saveMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({ evaluacionId, fotoExistente }) => {
       if (!selectedParticipant || !selectedCurso) throw new Error('Selecciona participante y categoría');
       const faltantes = rubricasActivas.some((r) => !niveles[r.id]);
       if (faltantes) throw new Error('Debes calificar todas las rúbricas activas');
@@ -428,8 +436,15 @@ export function ReportesPage() {
       form.append('nombreCategoria', cursoLabel(selectedCurso));
       form.append('comentario', comentario);
       form.append('enviado', 'false');
-      if (editingEvalId) form.append('evaluacionId', String(editingEvalId));
-      if (fotoFile) form.append('foto', fotoFile);
+      const evalId = Number(evaluacionId);
+      if (Number.isInteger(evalId) && evalId > 0) {
+        form.append('evaluacionId', String(evalId));
+      }
+      if (fotoFile) {
+        form.append('foto', fotoFile);
+      } else if (fotoExistente) {
+        form.append('fotoExistente', fotoExistente);
+      }
       form.append(
         'rubricas',
         JSON.stringify(
@@ -443,7 +458,10 @@ export function ReportesPage() {
     },
     onSuccess: (data) => {
       setSuccessData(data?.evaluacion || null);
-      setToastState({ show: true, type: 'success', message: 'Evaluación guardada correctamente.' });
+      const msg = data?.actualizada
+        ? 'Evaluación actualizada correctamente.'
+        : 'Evaluación guardada correctamente.';
+      setToastState({ show: true, type: 'success', message: msg });
       window.setTimeout(() => setToastState((prev) => ({ ...prev, show: false })), 2200);
       resetDraft();
       setTab('historial');
@@ -821,10 +839,14 @@ export function ReportesPage() {
                           const file = e.target.files?.[0] || null;
                           setFotoFile(file);
                           if (!file) {
-                            setPreviewUrl((prev) => {
-                              revokeObjectUrlIfBlob(prev);
-                              return '';
-                            });
+                            if (editingEvalId && editingFotoPath) {
+                              setPreviewUrl(evaluacionFotoSrc(editingFotoPath));
+                            } else {
+                              setPreviewUrl((prev) => {
+                                revokeObjectUrlIfBlob(prev);
+                                return '';
+                              });
+                            }
                             return;
                           }
                           setPreviewUrl((prev) => {
@@ -913,7 +935,12 @@ export function ReportesPage() {
                 <button
                   type="button"
                   className="btn btn-primary btn-sm att-reportes-save-bar__btn"
-                  onClick={() => saveMutation.mutate()}
+                  onClick={() =>
+                    saveMutation.mutate({
+                      evaluacionId: editingEvalId,
+                      fotoExistente: editingEvalId && !fotoFile ? editingFotoPath : '',
+                    })
+                  }
                   disabled={saveMutation.isPending}
                 >
                   {saveMutation.isPending ? 'Guardando...' : 'Guardar evaluación'}
