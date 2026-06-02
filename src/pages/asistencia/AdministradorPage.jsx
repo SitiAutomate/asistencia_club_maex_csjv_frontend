@@ -39,6 +39,32 @@ function exportInformesCsv(rows) {
   URL.revokeObjectURL(url);
 }
 
+function buildInformesListParams(filters, page, limit) {
+  const u = new URLSearchParams();
+  u.set('page', String(page));
+  u.set('limit', String(limit));
+  if (filters.fechaInicio) u.set('fechaInicio', filters.fechaInicio);
+  if (filters.fechaFin) u.set('fechaFin', filters.fechaFin);
+  if (filters.anio) u.set('anio', filters.anio);
+  if (filters.periodo) u.set('periodo', filters.periodo);
+  if (filters.categoria) u.set('categoria', filters.categoria);
+  if (filters.linea) u.set('linea', filters.linea);
+  if (filters.entrenador) u.set('entrenador', filters.entrenador);
+  if (filters.estado && filters.estado !== 'todos') u.set('estado', filters.estado);
+  return u;
+}
+
+function filterRowsBySearch(rows, search) {
+  const q = normalizeForSearch(search);
+  if (!q) return rows;
+  return rows.filter((r) => {
+    const blob = normalizeForSearch(
+      `${r.participante} ${r.identificacion} ${r.categoria} ${r.nombreCategoria} ${r.entrenador}`,
+    );
+    return blob.includes(q);
+  });
+}
+
 const ESTADOS_FILTRO = [
   { value: 'todos', label: 'Todos' },
   { value: 'con_pdf', label: 'Con PDF' },
@@ -141,6 +167,7 @@ export function AdministradorPage() {
   const [limit, setLimit] = useState(25);
   const [tableSearch, setTableSearch] = useState('');
   const [activeTab, setActiveTab] = useState('tabla');
+  const [isExporting, setIsExporting] = useState(false);
 
   const resumenQuery = useQuery({
     queryKey: ['admin-informes-resumen', applied],
@@ -176,17 +203,7 @@ export function AdministradorPage() {
   const listQuery = useQuery({
     queryKey: ['admin-informes-list', applied, page, limit],
     queryFn: () => {
-      const u = new URLSearchParams();
-      u.set('page', String(page));
-      u.set('limit', String(limit));
-      if (applied.fechaInicio) u.set('fechaInicio', applied.fechaInicio);
-      if (applied.fechaFin) u.set('fechaFin', applied.fechaFin);
-      if (applied.anio) u.set('anio', applied.anio);
-      if (applied.periodo) u.set('periodo', applied.periodo);
-      if (applied.categoria) u.set('categoria', applied.categoria);
-      if (applied.linea) u.set('linea', applied.linea);
-      if (applied.entrenador) u.set('entrenador', applied.entrenador);
-      if (applied.estado && applied.estado !== 'todos') u.set('estado', applied.estado);
+      const u = buildInformesListParams(applied, page, limit);
       return getJson(`/api/admin/informes?${u.toString()}`);
     },
     enabled: navEnabled && isAdmin,
@@ -216,15 +233,40 @@ export function AdministradorPage() {
   const total = Number(listQuery.data?.total ?? 0);
 
   const filteredRows = useMemo(() => {
-    const q = normalizeForSearch(tableSearch);
-    if (!q) return rows;
-    return rows.filter((r) => {
-      const blob = normalizeForSearch(
-        `${r.participante} ${r.identificacion} ${r.categoria} ${r.nombreCategoria} ${r.entrenador}`,
-      );
-      return blob.includes(q);
-    });
+    return filterRowsBySearch(rows, tableSearch);
   }, [rows, tableSearch]);
+
+  const exportarTodos = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      const batchSize = 100;
+      let nextPage = 1;
+      let totalRegistros = Number.POSITIVE_INFINITY;
+      const allRows = [];
+
+      while (allRows.length < totalRegistros) {
+        const u = buildInformesListParams(applied, nextPage, batchSize);
+        const data = await getJson(`/api/admin/informes?${u.toString()}`);
+        const pageRows = Array.isArray(data?.evaluaciones) ? data.evaluaciones : [];
+        if (Number.isFinite(Number(data?.total))) {
+          totalRegistros = Number(data.total);
+        }
+        if (!pageRows.length) break;
+        allRows.push(...pageRows);
+        if (pageRows.length < batchSize) break;
+        nextPage += 1;
+      }
+
+      const rowsToExport = filterRowsBySearch(allRows, tableSearch);
+      if (!rowsToExport.length) return;
+      exportInformesCsv(rowsToExport);
+    } catch {
+      window.alert('No se pudo exportar el listado completo. Intenta nuevamente.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const aplicarFiltros = () => {
     setApplied({
@@ -584,8 +626,8 @@ export function AdministradorPage() {
           <span className="small text-muted">registros</span>
         </div>
         <div className="d-flex align-items-center gap-2 flex-wrap">
-          <button type="button" className="btn btn-success btn-sm" onClick={() => exportInformesCsv(filteredRows)} disabled={!filteredRows.length}>
-            Exportar Excel
+          <button type="button" className="btn btn-success btn-sm" onClick={exportarTodos} disabled={isExporting || !total}>
+            {isExporting ? 'Exportando…' : 'Exportar Excel'}
           </button>
           <label className="small mb-0">Buscar:</label>
           <input
