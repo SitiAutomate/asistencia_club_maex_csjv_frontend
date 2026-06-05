@@ -1,3 +1,20 @@
+export function anioMesBogota() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Bogota',
+    year: 'numeric',
+    month: '2-digit',
+  }).formatToParts(new Date());
+  return {
+    anio: Number(parts.find((p) => p.type === 'year')?.value ?? new Date().getFullYear()),
+    mes: Number(parts.find((p) => p.type === 'month')?.value ?? 1),
+  };
+}
+
+export function periodoInformesActual() {
+  const { mes } = anioMesBogota();
+  return mes <= 7 ? 'ene_jul' : 'ago_dic';
+}
+
 /** Fecha calendario en America/Bogota (YYYY-MM-DD). */
 export function fechaHoyColombia() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date());

@@ -6,14 +6,13 @@ import { getDefaultAppPath, isNavKeyEnabled } from '../../lib/navFeatures.js';
 import { getDocumento, getNombreCompleto } from '../../lib/inscritoHelpers.js';
 import { normalizeForSearch } from '../../lib/normalizeSearch.js';
 import { queryClient } from '../../lib/queryClient.js';
-import { informeYaEnviadoHoyColombia } from '../../lib/informeEnvioColombia.js';
+import {
+  anioMesBogota,
+  informeYaEnviadoHoyColombia,
+  periodoInformesActual,
+} from '../../lib/informeEnvioColombia.js';
 
 const REPORTES_INSCRITOS_ESTADOS = 'CONFIRMADO,ACTIVO,INCAPACITADO';
-
-function getPeriodoInformesActual() {
-  const mes = new Date().getMonth() + 1;
-  return mes <= 7 ? 'ene_jul' : 'ago_dic';
-}
 const EVALUACION_FOTO_MAX_MB = Math.max(1, Number(import.meta.env.VITE_EVALUACION_FOTO_MAX_MB) || 20);
 const EVALUACION_FOTO_MAX_BYTES = EVALUACION_FOTO_MAX_MB * 1024 * 1024;
 
@@ -318,14 +317,14 @@ export function ReportesPage() {
     [cursos, effectiveCursoId],
   );
 
-  const periodoInformes = getPeriodoInformesActual();
-  const anioInformes = String(new Date().getFullYear());
+  const periodoInformes = periodoInformesActual();
+  const anioInformes = String(anioMesBogota().anio);
 
   const inscritosQuery = useQuery({
     queryKey: ['reportes-inscritos', effectiveCursoId, REPORTES_INSCRITOS_ESTADOS, periodoInformes, anioInformes],
     queryFn: () =>
       getJson(
-        `/api/inscritos?scope=periodo&periodo=${encodeURIComponent(periodoInformes)}&anio=${encodeURIComponent(anioInformes)}&estado=${encodeURIComponent(REPORTES_INSCRITOS_ESTADOS)}&withRutaExtra=true&lite=true&idCurso=${encodeURIComponent(effectiveCursoId)}`,
+        `/api/inscritos/reportes?forReportes=1&periodo=${encodeURIComponent(periodoInformes)}&anio=${encodeURIComponent(anioInformes)}&estado=${encodeURIComponent(REPORTES_INSCRITOS_ESTADOS)}&withRutaExtra=true&lite=true&idCurso=${encodeURIComponent(effectiveCursoId)}`,
       ),
     enabled: Boolean(effectiveCursoId),
     placeholderData: (prev) => prev,
