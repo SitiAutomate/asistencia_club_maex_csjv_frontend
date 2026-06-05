@@ -17,6 +17,7 @@ import { InformacionPage } from './pages/asistencia/InformacionPage.jsx';
 import { GestionRubricasPage } from './pages/asistencia/GestionRubricasPage.jsx';
 import { ReportesPage } from './pages/asistencia/ReportesPage.jsx';
 import { AdministradorPage } from './pages/asistencia/AdministradorPage.jsx';
+import { DocumentacionPage } from './pages/documentacion/DocumentacionPage.jsx';
 
 export default function App() {
   return (
@@ -41,6 +42,7 @@ export default function App() {
             <Route path="rubricas" element={<GestionRubricasPage />} />
             <Route path="reportes" element={<ReportesPage />} />
             <Route path="administrador" element={<AdministradorPage />} />
+            <Route path="documentacion" element={<DocumentacionPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Route>

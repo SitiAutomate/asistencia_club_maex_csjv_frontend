@@ -10,6 +10,17 @@ import { informeYaEnviadoHoyColombia } from '../../lib/informeEnvioColombia.js';
 
 const REPORTES_INSCRITOS_ESTADOS = 'CONFIRMADO,ACTIVO,INCAPACITADO';
 
+function getPeriodoInformesActual() {
+  const mes = new Date().getMonth() + 1;
+  return mes <= 7 ? 'ene_jul' : 'ago_dic';
+}
+const EVALUACION_FOTO_MAX_MB = Math.max(1, Number(import.meta.env.VITE_EVALUACION_FOTO_MAX_MB) || 20);
+const EVALUACION_FOTO_MAX_BYTES = EVALUACION_FOTO_MAX_MB * 1024 * 1024;
+
+function evaluacionFotoMaxSizeMessage() {
+  return `La foto supera el tamaño máximo permitido (${EVALUACION_FOTO_MAX_MB} MB). Elige otra imagen o reduce su tamaño.`;
+}
+
 function cursoId(curso) {
   return String(curso?.ID_Curso ?? '').trim();
 }
@@ -307,11 +318,14 @@ export function ReportesPage() {
     [cursos, effectiveCursoId],
   );
 
+  const periodoInformes = getPeriodoInformesActual();
+  const anioInformes = String(new Date().getFullYear());
+
   const inscritosQuery = useQuery({
-    queryKey: ['reportes-inscritos', effectiveCursoId, REPORTES_INSCRITOS_ESTADOS],
+    queryKey: ['reportes-inscritos', effectiveCursoId, REPORTES_INSCRITOS_ESTADOS, periodoInformes, anioInformes],
     queryFn: () =>
       getJson(
-        `/api/inscritos?estado=${encodeURIComponent(REPORTES_INSCRITOS_ESTADOS)}&withRutaExtra=true&lite=true&idCurso=${encodeURIComponent(effectiveCursoId)}`,
+        `/api/inscritos?scope=periodo&periodo=${encodeURIComponent(periodoInformes)}&anio=${encodeURIComponent(anioInformes)}&estado=${encodeURIComponent(REPORTES_INSCRITOS_ESTADOS)}&withRutaExtra=true&lite=true&idCurso=${encodeURIComponent(effectiveCursoId)}`,
       ),
     enabled: Boolean(effectiveCursoId),
     placeholderData: (prev) => prev,
@@ -469,7 +483,12 @@ export function ReportesPage() {
       queryClient.invalidateQueries({ queryKey: ['reportes-evals', selectedDoc] });
     },
     onError: (error) => {
-      setToastState({ show: true, type: 'danger', message: error?.message || 'No se pudo guardar la evaluación' });
+      const rawMsg = String(error?.message || '');
+      const msg =
+        rawMsg.toLowerCase().includes('file too large') || error?.status === 413
+          ? evaluacionFotoMaxSizeMessage()
+          : rawMsg || 'No se pudo guardar la evaluación';
+      setToastState({ show: true, type: 'danger', message: msg });
       window.setTimeout(() => setToastState((prev) => ({ ...prev, show: false })), 2600);
     },
   });
@@ -837,8 +856,8 @@ export function ReportesPage() {
                         className="d-none"
                         onChange={(e) => {
                           const file = e.target.files?.[0] || null;
-                          setFotoFile(file);
                           if (!file) {
+                            setFotoFile(null);
                             if (editingEvalId && editingFotoPath) {
                               setPreviewUrl(evaluacionFotoSrc(editingFotoPath));
                             } else {
@@ -849,6 +868,18 @@ export function ReportesPage() {
                             }
                             return;
                           }
+                          if (file.size > EVALUACION_FOTO_MAX_BYTES) {
+                            e.target.value = '';
+                            setFotoFile(null);
+                            setToastState({
+                              show: true,
+                              type: 'danger',
+                              message: evaluacionFotoMaxSizeMessage(),
+                            });
+                            window.setTimeout(() => setToastState((prev) => ({ ...prev, show: false })), 3200);
+                            return;
+                          }
+                          setFotoFile(file);
                           setPreviewUrl((prev) => {
                             revokeObjectUrlIfBlob(prev);
                             return URL.createObjectURL(file);

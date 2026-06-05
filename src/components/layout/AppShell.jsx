@@ -17,6 +17,7 @@ const ROUTE_TITLES = {
   '/rubricas': 'Gestión de rúbricas',
   '/reportes': 'Reportes',
   '/administrador': 'Administrador',
+  '/documentacion': 'Documentación',
 };
 
 export function AppShell() {
@@ -32,6 +33,10 @@ export function AppShell() {
   });
 
   const user = meQuery.data?.user;
+  const canSeeDocs =
+    String(user?.rol || '').trim() === 'Desarrollador' ||
+    String(user?.rol || '').trim() === 'Administrador';
+
   const navItems = getEnabledNavItems().filter(
     (item) =>
       item.key !== 'administrador' || String(user?.rol || '').trim() === 'Administrador',
@@ -102,6 +107,19 @@ export function AppShell() {
             </NavLink>
           ))}
         </nav>
+        {canSeeDocs ? (
+          <div className="px-3 pb-2">
+            <NavLink
+              to="/documentacion"
+              className={({ isActive }) =>
+                `att-sidebar__link d-block ${isActive ? 'is-active' : ''}`
+              }
+              onClick={() => setSidebarOpen(false)}
+            >
+              Documentación
+            </NavLink>
+          </div>
+        ) : null}
         <div className="att-sidebar__footer">
           <button type="button" className="att-sidebar__link text-danger" onClick={logout}>
             Cerrar sesión
