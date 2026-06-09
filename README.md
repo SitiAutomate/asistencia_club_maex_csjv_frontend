@@ -58,8 +58,6 @@ Abra [http://localhost:5173](http://localhost:5173).
 | `VITE_VIEW_ADMINISTRADOR` | Panel admin |
 | `VITE_SUPPORT_WHATSAPP` | Número para soporte en pantalla Asistencia |
 | `VITE_BRANDING_VERSION` | Cache-bust del logo |
-| `VITE_TEST_EMAIL` | (opcional) Correo de prueba al enviar informes |
-
 ## Proxy en desarrollo
 
 En `vite.config.js`, las peticiones a `/api` y `/uploads` se redirigen a `http://localhost:3006`.

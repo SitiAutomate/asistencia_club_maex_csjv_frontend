@@ -69,7 +69,11 @@ function revokeObjectUrlIfBlob(url) {
  * Evita cross-origin + CORP y URLs absolutas al API cuando VITE_API_URL apunta a otro host.
  */
 function mensajeVentanaEnvioInforme(ventana) {
-  if (!ventana || ventana.envioInformePermitido === true) return '';
+  if (!ventana) return '';
+  if (ventana.envioCorreosFamiliaHabilitado === false) {
+    return 'El envío a padres/responsables no está habilitado en el servidor.';
+  }
+  if (ventana.envioInformePermitido === true) return '';
   const { codigoBloqueo, fechaInicio, fechaFin } = ventana;
   if (codigoBloqueo === 'disabled') {
     return 'El envío de informes por correo no está habilitado.';
@@ -104,7 +108,6 @@ function SuccessModal({
   onClose,
   onViewPdf,
   onSendMail,
-  correoDestino,
   envioInformePermitido,
   ventanaCargando,
   bloqueoMensaje,
@@ -124,9 +127,10 @@ function SuccessModal({
         </div>
         <div className="att-modal__body d-grid gap-3">
           <p className="mb-0 small text-muted">Puedes ver el PDF ahora o enviarlo por correo.</p>
-          {correoDestino ? (
+          {envioInformePermitido ? (
             <p className="mb-0 small text-muted">
-              Correo de destino: <span className="text-body">{correoDestino}</span>
+              Al enviar, el informe llegará a los correos de padre, madre y/o responsable registrados
+              para este participante.
             </p>
           ) : null}
           {ventanaCargando ? (
@@ -241,7 +245,6 @@ export function ReportesPage() {
   const isNarrowViewport = useMediaQuery('(max-width: 767px)');
 
   const navEnabled = isNavKeyEnabled('reportes');
-  const testEmail = import.meta.env.VITE_TEST_EMAIL || email || 'correo.prueba@club.local';
 
   useEffect(() => {
     const pollTimers = envioPollTimersRef.current;
@@ -501,14 +504,17 @@ export function ReportesPage() {
   const ventanaVentana = ventanaEnvioQuery.data;
   const ventanaCargando = ventanaEnvioQuery.isLoading;
   const ventanaFallo = ventanaEnvioQuery.isError;
+  const envioCorreosFamiliaHabilitado = ventanaVentana?.envioCorreosFamiliaHabilitado === true;
   const envioInformePermitidoPorApi =
-    ventanaEnvioQuery.isSuccess && ventanaVentana?.envioInformePermitido === true;
+    ventanaEnvioQuery.isSuccess &&
+    ventanaVentana?.envioInformePermitido === true &&
+    envioCorreosFamiliaHabilitado;
 
   const enviarMutation = useMutation({
-    mutationFn: ({ id, correo }) =>
+    mutationFn: ({ id }) =>
       apiFetch(`/api/evaluaciones/${id}/enviar`, {
         method: 'POST',
-        body: JSON.stringify({ destinatario: correo }),
+        body: JSON.stringify({}),
       }),
     onSuccess: (data, variables) => {
       const updated = data?.evaluacion;
@@ -804,7 +810,6 @@ export function ReportesPage() {
                               evt.stopPropagation();
                               enviarMutation.mutate({
                                 id: e.id,
-                                correo: testEmail,
                                 identificacion: selectedDoc,
                               });
                             }}
@@ -994,11 +999,9 @@ export function ReportesPage() {
           if (!successData?.id) return;
           enviarMutation.mutate({
             id: successData.id,
-            correo: testEmail,
             identificacion: selectedDoc,
           });
         }}
-        correoDestino={testEmail}
         envioInformePermitido={envioInformePermitidoPorApi}
         ventanaCargando={ventanaCargando}
         bloqueoMensaje={mensajeVentanaEnvioInforme(ventanaVentana)}
