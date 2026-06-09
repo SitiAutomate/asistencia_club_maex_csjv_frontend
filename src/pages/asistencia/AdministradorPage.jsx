@@ -5,6 +5,10 @@ import { apiUrl, getJson } from '../../lib/api.js';
 import { getDefaultAppPath, isNavKeyEnabled } from '../../lib/navFeatures.js';
 import { normalizeForSearch } from '../../lib/normalizeSearch.js';
 
+function tieneInformePdf(informe) {
+  return Boolean(String(informe ?? '').trim());
+}
+
 function fmtFechaCorta(value) {
   if (!value) return '—';
   const d = new Date(value);
@@ -12,37 +16,42 @@ function fmtFechaCorta(value) {
   return d.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
-function toCsvValue(value) {
-  return `"${String(value ?? '').replace(/"/g, '""')}"`;
-}
-
-function exportInformesCsv(rows) {
-  const headers = ['Estado PDF', 'Enviado', 'Fecha', 'Participante', 'Identificación', 'Categoría', 'Entrenador'];
-  const lines = [headers.map(toCsvValue).join(',')];
-  rows.forEach((r) => {
-    const estadoPdf = r.informe ? 'Con PDF' : 'Sin PDF';
-    const env = r.enviado ? 'Enviado' : 'No enviado';
-    lines.push(
-      [estadoPdf, env, fmtFechaCorta(r.fecha_creacion), r.participante, r.identificacion, r.nombreCategoria || r.categoria, r.entrenador]
-        .map(toCsvValue)
-        .join(','),
-    );
+async function exportInformesExcel(rows) {
+  const { exportRowsToExcel } = await import('../../lib/exportExcel.js');
+  await exportRowsToExcel({
+    rows,
+    sheetName: 'Informes',
+    fileNamePrefix: 'informes',
+    columns: [
+      {
+        key: 'informe',
+        header: 'Estado PDF',
+        format: (value) => (tieneInformePdf(value) ? 'Con PDF' : 'Sin PDF'),
+      },
+      {
+        key: 'enviado',
+        header: 'Enviado',
+        format: (value) => (value ? 'Enviado' : 'No enviado'),
+      },
+      {
+        key: 'fecha_creacion',
+        header: 'Fecha',
+        format: (value) => fmtFechaCorta(value),
+      },
+      { key: 'participante', header: 'Participante' },
+      { key: 'identificacion', header: 'Identificación' },
+      {
+        key: 'nombreCategoria',
+        header: 'Categoría',
+        format: (_value, row) => row.nombreCategoria || row.categoria || '',
+      },
+      { key: 'entrenador', header: 'Entrenador' },
+    ],
   });
-  const blob = new Blob([`\uFEFF${lines.join('\n')}`], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `informes_${new Date().toISOString().slice(0, 10)}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
 }
 
-function buildInformesListParams(filters, page, limit) {
+function buildInformesFilterParams(filters) {
   const u = new URLSearchParams();
-  u.set('page', String(page));
-  u.set('limit', String(limit));
   if (filters.fechaInicio) u.set('fechaInicio', filters.fechaInicio);
   if (filters.fechaFin) u.set('fechaFin', filters.fechaFin);
   if (filters.anio) u.set('anio', filters.anio);
@@ -51,6 +60,13 @@ function buildInformesListParams(filters, page, limit) {
   if (filters.linea) u.set('linea', filters.linea);
   if (filters.entrenador) u.set('entrenador', filters.entrenador);
   if (filters.estado && filters.estado !== 'todos') u.set('estado', filters.estado);
+  return u;
+}
+
+function buildInformesListParams(filters, page, limit) {
+  const u = buildInformesFilterParams(filters);
+  u.set('page', String(page));
+  u.set('limit', String(limit));
   return u;
 }
 
@@ -240,27 +256,11 @@ export function AdministradorPage() {
     if (isExporting) return;
     setIsExporting(true);
     try {
-      const batchSize = 100;
-      let nextPage = 1;
-      let totalRegistros = Number.POSITIVE_INFINITY;
-      const allRows = [];
-
-      while (allRows.length < totalRegistros) {
-        const u = buildInformesListParams(applied, nextPage, batchSize);
-        const data = await getJson(`/api/admin/informes?${u.toString()}`);
-        const pageRows = Array.isArray(data?.evaluaciones) ? data.evaluaciones : [];
-        if (Number.isFinite(Number(data?.total))) {
-          totalRegistros = Number(data.total);
-        }
-        if (!pageRows.length) break;
-        allRows.push(...pageRows);
-        if (pageRows.length < batchSize) break;
-        nextPage += 1;
-      }
-
-      const rowsToExport = filterRowsBySearch(allRows, tableSearch);
+      const u = buildInformesFilterParams(applied);
+      const data = await getJson(`/api/admin/informes/export?${u.toString()}`);
+      const rowsToExport = filterRowsBySearch(data?.evaluaciones || [], tableSearch);
       if (!rowsToExport.length) return;
-      exportInformesCsv(rowsToExport);
+      await exportInformesExcel(rowsToExport);
     } catch {
       window.alert('No se pudo exportar el listado completo. Intenta nuevamente.');
     } finally {
@@ -343,7 +343,7 @@ export function AdministradorPage() {
           <span className="att-admin-stat-card__icon" aria-hidden="true">
             <StatIcon type="total" />
           </span>
-          <span className="att-admin-stat-card__label">Total evaluaciones</span>
+          <span className="att-admin-stat-card__label">Total inscritos (periodo)</span>
           <strong className="att-admin-stat-card__value">{statsLoading ? '…' : r.totalEvaluaciones ?? '—'}</strong>
         </article>
         <article className={`att-admin-stat-card ${statsLoading ? 'is-loading' : ''}`}>
@@ -685,11 +685,13 @@ export function AdministradorPage() {
                 </td>
               </tr>
             ) : (
-              filteredRows.map((row) => (
-                <tr key={row.id}>
+              filteredRows.map((row) => {
+                const puedeVerPdf = tieneInformePdf(row.informe);
+                return (
+                <tr key={row.rowKey || row.id}>
                   <td data-label="Estado">
-                    <span className={`badge ${row.informe ? 'text-bg-success' : 'text-bg-secondary'}`}>
-                      {row.informe ? 'Con PDF' : 'Sin PDF'}
+                    <span className={`badge ${puedeVerPdf ? 'text-bg-success' : 'text-bg-secondary'}`}>
+                      {puedeVerPdf ? 'Con PDF' : 'Sin PDF'}
                     </span>
                   </td>
                   <td data-label="Enviado">
@@ -698,15 +700,18 @@ export function AdministradorPage() {
                     </span>
                   </td>
                   <td data-label="Acciones">
-                    <button
-                      type="button"
-                      className="btn btn-outline-primary btn-sm py-0 px-2"
-                      title="Ver informe"
-                      disabled={!row.informe}
-                      onClick={() => row.informe && window.open(apiUrl(row.informe), '_blank', 'noopener,noreferrer')}
-                    >
-                      Ver
-                    </button>
+                    {puedeVerPdf ? (
+                      <button
+                        type="button"
+                        className="btn btn-outline-primary btn-sm py-0 px-2"
+                        title="Ver informe"
+                        onClick={() => window.open(apiUrl(row.informe), '_blank', 'noopener,noreferrer')}
+                      >
+                        Ver
+                      </button>
+                    ) : (
+                      <span className="text-muted small">—</span>
+                    )}
                   </td>
                   <td data-label="Fecha">{fmtFechaCorta(row.fecha_creacion)}</td>
                   <td data-label="Participante">{row.participante || '—'}</td>
@@ -714,7 +719,8 @@ export function AdministradorPage() {
                   <td data-label="Categoría">{row.nombreCategoria || row.categoria || '—'}</td>
                   <td data-label="Entrenador" className="small text-break">{row.entrenador || '—'}</td>
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>
