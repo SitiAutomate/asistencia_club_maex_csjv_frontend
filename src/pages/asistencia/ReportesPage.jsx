@@ -8,6 +8,8 @@ import { normalizeForSearch } from '../../lib/normalizeSearch.js';
 import { queryClient } from '../../lib/queryClient.js';
 import {
   anioMesBogota,
+  anioColombiaDesdeValor,
+  fmtFechaColombia,
   informeYaEnviadoHoyColombia,
   periodoInformesActual,
 } from '../../lib/informeEnvioColombia.js';
@@ -29,10 +31,11 @@ function cursoLabel(curso) {
 }
 
 function fmtFecha(value) {
-  if (!value) return '—';
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return String(value).slice(0, 10);
-  return d.toLocaleString('es-CO');
+  return fmtFechaColombia(value, { conHora: true });
+}
+
+function fmtFechaEnvio(value) {
+  return fmtFechaColombia(value, { conHora: true });
 }
 
 function normalizeValorToDb(value) {
@@ -113,6 +116,8 @@ function SuccessModal({
   bloqueoMensaje,
   isSending,
   yaEnviadoHoy,
+  correosFamilia,
+  correosFamiliaCargando,
 }) {
   if (!open) return null;
   const envioBloqueado = !ventanaCargando && (!envioInformePermitido || yaEnviadoHoy);
@@ -128,10 +133,28 @@ function SuccessModal({
         <div className="att-modal__body d-grid gap-3">
           <p className="mb-0 small text-muted">Puedes ver el PDF ahora o enviarlo por correo.</p>
           {envioInformePermitido ? (
-            <p className="mb-0 small text-muted">
-              Al enviar, el informe llegará a los correos de padre, madre y/o responsable registrados
-              para este participante.
-            </p>
+            <>
+              <p className="mb-0 small text-muted">
+                Al enviar, el informe llegará a los correos de padre, madre y/o responsable registrados
+                para este participante.
+              </p>
+              {correosFamiliaCargando ? (
+                <p className="mb-0 small text-muted">Consultando correos de destino…</p>
+              ) : correosFamilia?.length ? (
+                <div className="small mb-0">
+                  <strong>Correo(s) de destino:</strong>
+                  <ul className="mb-0 ps-3 mt-1">
+                    {correosFamilia.map((correo) => (
+                      <li key={correo}>{correo}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <div className="alert alert-warning small mb-0 py-2" role="alert">
+                  No hay correos de padre, madre o responsable registrados para este participante.
+                </div>
+              )}
+            </>
           ) : null}
           {ventanaCargando ? (
             <p className="mb-0 small text-muted">Comprobando si el envío por correo está permitido…</p>
@@ -154,7 +177,14 @@ function SuccessModal({
               type="button"
               className="btn btn-primary btn-sm"
               onClick={onSendMail}
-              disabled={ventanaCargando || envioBloqueado || isSending || yaEnviadoHoy}
+              disabled={
+                ventanaCargando ||
+                envioBloqueado ||
+                isSending ||
+                yaEnviadoHoy ||
+                correosFamiliaCargando ||
+                !correosFamilia?.length
+              }
             >
               {isSending ? 'Enviando…' : 'Enviar correo'}
             </button>
@@ -203,6 +233,10 @@ function EvalDetailModal({ open, evaluacion, onClose }) {
           <p className="small mb-1">
             <strong>Comentario:</strong> {evaluacion.comentario || '—'}
           </p>
+          <p className="small mb-1">
+            <strong>Enviada:</strong>{' '}
+            {evaluacion.fechaEnvio ? fmtFechaEnvio(evaluacion.fechaEnvio) : 'No enviada'}
+          </p>
           <div className="att-reportes-rubricas">
             {(evaluacion.detalles || []).map((d) => (
               <div key={`${evaluacion.id}-${d.id_rubrica}`} className="att-reportes-rubrica-card">
@@ -239,6 +273,8 @@ export function ReportesPage() {
   const [mobileEvalOpen, setMobileEvalOpen] = useState(false);
   const [courseOpen, setCourseOpen] = useState(false);
   const [courseSearch, setCourseSearch] = useState('');
+  const [historialAnio, setHistorialAnio] = useState(() => String(anioMesBogota().anio));
+  const [historialEnvio, setHistorialEnvio] = useState('todos');
   const coursePickerRef = useRef(null);
   const envioPollTimersRef = useRef(new Map());
 
@@ -360,14 +396,45 @@ export function ReportesPage() {
     queryKey: ['reportes-evals', selectedDoc],
     queryFn: () => getJson(`/api/evaluaciones/participante/${encodeURIComponent(selectedDoc)}`),
     enabled: Boolean(selectedDoc),
-    placeholderData: (prev) => prev,
   });
+
+  const participantInfoLoading = Boolean(selectedDoc) && evalsQuery.isPending;
 
   const evaluaciones = useMemo(() => {
     const rows = evalsQuery.data?.evaluaciones || [];
     if (!effectiveCursoId) return rows;
     return rows.filter((e) => String(e?.categoria ?? '').trim() === String(effectiveCursoId).trim());
   }, [evalsQuery.data, effectiveCursoId]);
+
+  const aniosHistorial = useMemo(() => {
+    const set = new Set(
+      evaluaciones.map((e) => anioColombiaDesdeValor(e.fecha_creacion)).filter(Boolean),
+    );
+    set.add(anioMesBogota().anio);
+    return [...set].sort((a, b) => b - a);
+  }, [evaluaciones]);
+
+  const evaluacionesFiltradas = useMemo(() => {
+    const anioFiltro = Number(historialAnio);
+    return evaluaciones.filter((e) => {
+      if (historialAnio) {
+        const anioEval = anioColombiaDesdeValor(e.fecha_creacion);
+        if (anioEval !== anioFiltro) return false;
+      }
+      if (historialEnvio === 'enviadas' && !e.enviado) return false;
+      if (historialEnvio === 'no_enviadas' && e.enviado) return false;
+      return true;
+    });
+  }, [evaluaciones, historialAnio, historialEnvio]);
+
+  const correosFamiliaQuery = useQuery({
+    queryKey: ['evaluaciones-correos-familia', selectedDoc],
+    queryFn: () => getJson(`/api/evaluaciones/correos-familia/${encodeURIComponent(selectedDoc)}`),
+    enabled: Boolean(selectedDoc),
+    staleTime: 60_000,
+  });
+
+  const correosFamilia = correosFamiliaQuery.data?.correos ?? [];
   const selectedEval = useMemo(
     () => evaluaciones.find((e) => Number(e.id) === Number(selectedEvalId)) || evaluaciones[0] || null,
     [evaluaciones, selectedEvalId],
@@ -451,7 +518,6 @@ export function ReportesPage() {
       form.append('categoria', cursoId(selectedCurso));
       form.append('nombreCategoria', cursoLabel(selectedCurso));
       form.append('comentario', comentario);
-      form.append('enviado', 'false');
       const evalId = Number(evaluacionId);
       if (Number.isInteger(evalId) && evalId > 0) {
         form.append('evaluacionId', String(evalId));
@@ -716,19 +782,55 @@ export function ReportesPage() {
             </div>
           ) : null}
 
-          <div className="att-reportes-right-body">
-          <div className="att-reportes-right-scroll">
+          <div className={`att-reportes-right-body${participantInfoLoading ? ' is-loading' : ''}`}>
+          {participantInfoLoading ? (
+            <div className="att-reportes-panel-loading" role="status" aria-live="polite">
+              <div className="spinner-border text-primary" aria-hidden="true" />
+              <span className="small text-muted">Cargando información del estudiante…</span>
+            </div>
+          ) : null}
+          <div className="att-reportes-right-scroll" aria-busy={participantInfoLoading}>
             {tab === 'historial' ? (
             !selectedDoc ? (
               <div className="att-reportes-empty">Selecciona un estudiante para ver su historial de evaluaciones.</div>
-            ) : evalsQuery.isLoading ? (
-              <div className="att-reportes-empty text-muted">Cargando evaluaciones…</div>
             ) : evaluaciones.length === 0 ? (
               <div className="att-reportes-empty">No hay evaluaciones previas</div>
+            ) : evaluacionesFiltradas.length === 0 ? (
+              <div className="att-reportes-empty">No hay evaluaciones con los filtros seleccionados</div>
             ) : (
               <div className="d-grid gap-3">
+                <div className="d-flex flex-wrap align-items-center gap-2 att-reportes-historial-filtros">
+                  <label className="small mb-0 d-flex align-items-center gap-1">
+                    <span>Año</span>
+                    <select
+                      className="form-select form-select-sm"
+                      style={{ width: 'auto' }}
+                      value={historialAnio}
+                      onChange={(evt) => setHistorialAnio(evt.target.value)}
+                    >
+                      {aniosHistorial.map((anio) => (
+                        <option key={anio} value={String(anio)}>
+                          {anio}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="small mb-0 d-flex align-items-center gap-1">
+                    <span>Estado envío</span>
+                    <select
+                      className="form-select form-select-sm"
+                      style={{ width: 'auto' }}
+                      value={historialEnvio}
+                      onChange={(evt) => setHistorialEnvio(evt.target.value)}
+                    >
+                      <option value="todos">Todas</option>
+                      <option value="enviadas">Enviadas</option>
+                      <option value="no_enviadas">No enviadas</option>
+                    </select>
+                  </label>
+                </div>
                 <div className="att-reportes-historial-cards">
-                  {evaluaciones.map((e) => {
+                  {evaluacionesFiltradas.map((e) => {
                     const isActive = Number(selectedEval?.id) === Number(e.id);
                     return (
                       <article
@@ -759,7 +861,8 @@ export function ReportesPage() {
                               <strong>Modificada:</strong> {fmtFecha(e.fecha_modificacion || e.fecha_creacion)}
                             </p>
                             <p className="small mb-0">
-                              <strong>Enviada:</strong> {e.fechaEnvio ? fmtFecha(e.fechaEnvio) : 'No enviada'}
+                              <strong>Enviada:</strong>{' '}
+                              {e.fechaEnvio ? fmtFechaEnvio(e.fechaEnvio) : 'No enviada'}
                             </p>
                           </div>
                           <span className={`badge ${e.enviado ? 'text-bg-success' : 'text-bg-secondary'}`}>
@@ -846,7 +949,7 @@ export function ReportesPage() {
             <div className="d-grid gap-3">
               {!selectedParticipant ? (
                 <div className="att-reportes-empty">Selecciona un estudiante para crear la evaluación.</div>
-              ) : (
+              ) : participantInfoLoading ? null : (
                 <>
                   <div className="att-reportes-student">
                     <div>
@@ -944,7 +1047,7 @@ export function ReportesPage() {
           )}
           </div>
 
-          {tab === 'crear' && selectedParticipant ? (
+          {tab === 'crear' && selectedParticipant && !participantInfoLoading ? (
             rubricasActivas.length > 0 ? (
               <div className="att-reportes-save-bar" role="region" aria-label="Guardar evaluación">
                 {editingEvalId ? (
@@ -1011,6 +1114,8 @@ export function ReportesPage() {
           enviarMutation.isPending &&
           Number(enviarMutation.variables?.id) === Number(successData?.id)
         }
+        correosFamilia={correosFamilia}
+        correosFamiliaCargando={correosFamiliaQuery.isLoading}
       />
       <EvalDetailModal open={Boolean(detailEval)} evaluacion={detailEval} onClose={() => setDetailEval(null)} />
       {toastState.show ? (

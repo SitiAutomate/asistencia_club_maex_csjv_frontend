@@ -483,6 +483,27 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
+}
+
+.att-reportes-right-body.is-loading .att-reportes-right-scroll {
+  pointer-events: none;
+  opacity: 0.35;
+}
+
+.att-reportes-panel-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(2px);
 }
 
 .att-reportes-right-scroll {
