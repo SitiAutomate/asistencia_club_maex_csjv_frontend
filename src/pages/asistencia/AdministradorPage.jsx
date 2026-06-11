@@ -1,9 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useOutletContext } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiUrl, getJson } from '../../lib/api.js';
 import { getDefaultAppPath, isNavKeyEnabled } from '../../lib/navFeatures.js';
 import { normalizeForSearch } from '../../lib/normalizeSearch.js';
+import {
+  periodoActualDesdeConfig,
+  periodoEtiqueta,
+  usePeriodoInformesConfig,
+} from '../../lib/periodoInformes.js';
 
 function tieneInformePdf(informe) {
   return Boolean(String(informe ?? '').trim());
@@ -89,9 +94,9 @@ const ESTADOS_FILTRO = [
   { value: 'no_enviado', label: 'No enviado' },
 ];
 
-function getPeriodoActual() {
+function getPeriodoActualFallback() {
   const mes = new Date().getMonth() + 1;
-  return mes <= 7 ? 'ene_jul' : 'ago_dic';
+  return mes >= 11 ? 'ago_dic' : 'ene_jul';
 }
 
 function StatIcon({ type }) {
@@ -147,6 +152,11 @@ export function AdministradorPage() {
   const { user } = useOutletContext() || {};
   const navEnabled = isNavKeyEnabled('administrador');
   const isAdmin = String(user?.rol || '').trim() === 'Administrador';
+  const periodoConfigQuery = usePeriodoInformesConfig(navEnabled && isAdmin);
+  const periodoConfig = periodoConfigQuery.data;
+  const periodoSugerido = periodoConfigQuery.isSuccess
+    ? periodoActualDesdeConfig(periodoConfig)
+    : getPeriodoActualFallback();
   const currentYearNum = new Date().getFullYear();
   const currentYear = String(Math.max(2025, currentYearNum));
   const firstYear = Math.max(2025, Number(currentYear) - 2);
@@ -155,9 +165,9 @@ export function AdministradorPage() {
     (_, idx) => String(firstYear + idx),
   );
   const yearActual = currentYear;
-  const periodoActual = getPeriodoActual();
+  const periodoActual = periodoSugerido;
 
-  const [periodo, setPeriodo] = useState(periodoActual);
+  const [periodo, setPeriodo] = useState(() => getPeriodoActualFallback());
   const [fechaInicio, setFechaInicio] = useState('');
   const [fechaFin, setFechaFin] = useState('');
   const [anio, setAnio] = useState(yearActual);
@@ -169,7 +179,7 @@ export function AdministradorPage() {
   const [estado, setEstado] = useState('todos');
 
   const [applied, setApplied] = useState({
-    periodo: periodoActual,
+    periodo: getPeriodoActualFallback(),
     fechaInicio: '',
     fechaFin: '',
     anio: yearActual,
@@ -184,6 +194,13 @@ export function AdministradorPage() {
   const [tableSearch, setTableSearch] = useState('');
   const [activeTab, setActiveTab] = useState('tabla');
   const [isExporting, setIsExporting] = useState(false);
+
+  useEffect(() => {
+    if (!periodoConfigQuery.isSuccess) return;
+    const actual = periodoActualDesdeConfig(periodoConfig);
+    setPeriodo(actual);
+    setApplied((prev) => ({ ...prev, periodo: actual }));
+  }, [periodoConfigQuery.isSuccess, periodoConfig]);
 
   const resumenQuery = useQuery({
     queryKey: ['admin-informes-resumen', applied],
@@ -284,7 +301,7 @@ export function AdministradorPage() {
   };
 
   const limpiarFiltros = () => {
-    setPeriodo(periodoActual);
+    setPeriodo(periodoSugerido);
     setFechaInicio('');
     setFechaFin('');
     setAnio(yearActual);
@@ -295,7 +312,7 @@ export function AdministradorPage() {
     setEntrenador('');
     setEstado('todos');
     setApplied({
-      periodo: periodoActual,
+      periodo: periodoSugerido,
       fechaInicio: '',
       fechaFin: '',
       anio: yearActual,
@@ -383,8 +400,8 @@ export function AdministradorPage() {
                 Periodo
               </label>
               <select className="form-select form-select-sm" value={periodo} onChange={(e) => setPeriodo(e.target.value)}>
-                <option value="ene_jul">Enero - Julio</option>
-                <option value="ago_dic">Agosto - Diciembre</option>
+                <option value="ene_jul">{periodoEtiqueta(periodoConfig, 'ene_jul')}</option>
+                <option value="ago_dic">{periodoEtiqueta(periodoConfig, 'ago_dic')}</option>
               </select>
             </div>
             <div className="col-12 col-md-6 col-lg-3">

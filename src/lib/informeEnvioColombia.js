@@ -10,11 +10,6 @@ export function anioMesBogota() {
   };
 }
 
-export function periodoInformesActual() {
-  const { mes } = anioMesBogota();
-  return mes <= 7 ? 'ene_jul' : 'ago_dic';
-}
-
 /** Fecha calendario en America/Bogota (YYYY-MM-DD). */
 export function fechaHoyColombia() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date());

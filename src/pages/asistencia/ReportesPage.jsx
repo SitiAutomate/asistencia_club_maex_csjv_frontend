@@ -11,8 +11,8 @@ import {
   anioColombiaDesdeValor,
   fmtFechaColombia,
   informeYaEnviadoHoyColombia,
-  periodoInformesActual,
 } from '../../lib/informeEnvioColombia.js';
+import { periodoActualDesdeConfig, usePeriodoInformesConfig } from '../../lib/periodoInformes.js';
 
 const REPORTES_INSCRITOS_ESTADOS = 'CONFIRMADO,ACTIVO,INCAPACITADO';
 const EVALUACION_FOTO_MAX_MB = Math.max(1, Number(import.meta.env.VITE_EVALUACION_FOTO_MAX_MB) || 20);
@@ -356,7 +356,8 @@ export function ReportesPage() {
     [cursos, effectiveCursoId],
   );
 
-  const periodoInformes = periodoInformesActual();
+  const periodoConfigQuery = usePeriodoInformesConfig(navEnabled);
+  const periodoInformes = periodoActualDesdeConfig(periodoConfigQuery.data);
   const anioInformes = String(anioMesBogota().anio);
 
   const inscritosQuery = useQuery({
