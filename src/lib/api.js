@@ -118,3 +118,25 @@ export function postJson(path, body) {
 export function getJson(path) {
   return apiFetch(path, { method: 'GET' });
 }
+
+export function toAuthenticatedUploadApiPath(foto) {
+  if (foto == null) return '';
+  const s = String(foto).trim();
+  if (!s || /^https?:\/\//i.test(s) || s.startsWith('//')) return '';
+  const p = s.startsWith('/') ? s : `/${s}`;
+  if (p.startsWith('/api/uploads')) return p;
+  if (p.startsWith('/uploads')) return `/api${p}`;
+  return '';
+}
+
+export async function fetchAuthenticatedImageObjectUrl(uploadPath) {
+  const path = toAuthenticatedUploadApiPath(uploadPath);
+  if (!path) return '';
+  const token = getStoredToken();
+  const res = await fetch(apiUrl(path), {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) return '';
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}

@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Navigate, useOutletContext } from 'react-router-dom';
+import { Navigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { getJson, postJson } from '../../lib/api.js';
 import { queryClient } from '../../lib/queryClient.js';
 import { getDefaultAppPath, isNavKeyEnabled } from '../../lib/navFeatures.js';
+import { buildFaltasMesMap, getMesActualRange } from '../../lib/asistenciaFaltas.js';
 import { matchesParticipantSearch, normalizeForSearch } from '../../lib/normalizeSearch.js';
 import {
   buildAsistenciaBody,
@@ -12,6 +13,7 @@ import {
   getNombreCompleto,
 } from '../../lib/inscritoHelpers.js';
 import { ParticipantCard } from '../../components/asistencia/ParticipantCard.jsx';
+import { AsistenciaHistorialTab } from '../../components/asistencia/AsistenciaHistorialTab.jsx';
 import { ExcusaModal } from '../../components/asistencia/ExcusaModal.jsx';
 import { ParticipantDetailModal } from '../../components/asistencia/ParticipantDetailModal.jsx';
 import { IconSearch } from '../../components/asistencia/AttendanceIcons.jsx';
@@ -44,6 +46,17 @@ export function AsistenciaPage() {
   const { user } = useOutletContext() || {};
   const email = user?.email || '';
   const isAdmin = String(user?.rol || '').trim() === 'Administrador';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const vista = searchParams.get('tab') === 'historial' ? 'historial' : 'registrar';
+  const mesActual = useMemo(() => getMesActualRange(), []);
+
+  const setVista = (next) => {
+    if (next === 'historial') {
+      setSearchParams({ tab: 'historial' });
+      return;
+    }
+    setSearchParams({});
+  };
 
   const [courseId, setCourseId] = useState('');
   const [courseSearch, setCourseSearch] = useState('');
@@ -88,8 +101,23 @@ export function AsistenciaPage() {
   const asistenciaQuery = useQuery({
     queryKey: ['asistencia-hoy'],
     queryFn: () => getJson('/api/asistencia'),
-    enabled: Boolean(email),
+    enabled: Boolean(email) && vista === 'registrar',
   });
+
+  const faltasMesQuery = useQuery({
+    queryKey: ['asistencia-faltas-mes', mesActual.inicio, mesActual.fin],
+    queryFn: () =>
+      getJson(
+        `/api/asistencia?fechaInicio=${encodeURIComponent(mesActual.inicio)}&fechaFin=${encodeURIComponent(mesActual.fin)}`,
+      ),
+    enabled: Boolean(email) && vista === 'registrar' && hasAsignacion,
+    staleTime: 60_000,
+  });
+
+  const faltasPorParticipante = useMemo(
+    () => buildFaltasMesMap(faltasMesQuery.data?.asistencia),
+    [faltasMesQuery.data],
+  );
 
   const reportMut = useMutation({
     mutationFn: (body) => postJson('/api/asistencia', body),
@@ -115,6 +143,8 @@ export function AsistenciaPage() {
       onSuccess: () => {
         setLocalReport((prev) => ({ ...prev, [k]: { reporte, comentarios } }));
         queryClient.invalidateQueries({ queryKey: ['asistencia-hoy'] });
+        queryClient.invalidateQueries({ queryKey: ['asistencia-faltas-mes'] });
+        queryClient.invalidateQueries({ queryKey: ['historial'] });
         onAfter?.();
       },
       onSettled: () => setBusyKey(null),
@@ -197,6 +227,24 @@ export function AsistenciaPage() {
   return (
     <>
       <div className="att-toolbar att-toolbar--sticky">
+        <div className="att-tabs att-toolbar__tabs">
+          <button
+            type="button"
+            className={`att-tab-btn ${vista === 'registrar' ? 'is-active' : ''}`}
+            onClick={() => setVista('registrar')}
+          >
+            Registrar
+          </button>
+          <button
+            type="button"
+            className={`att-tab-btn ${vista === 'historial' ? 'is-active' : ''}`}
+            onClick={() => setVista('historial')}
+          >
+            Historial
+          </button>
+        </div>
+        {vista === 'registrar' ? (
+          <>
         <div ref={coursePickerRef} className={`att-course-picker ${courseOpen ? 'is-open' : ''}`}>
           <button
             type="button"
@@ -277,9 +325,15 @@ export function AsistenciaPage() {
             aria-label="Buscar participante"
           />
         </div>
+          </>
+        ) : null}
       </div>
 
       <div className="att-main">
+        {vista === 'historial' ? (
+          <AsistenciaHistorialTab enabled={Boolean(email)} />
+        ) : (
+          <>
         {inscritosQuery.isError && (
           <div className="alert alert-danger small">{inscritosQuery.error?.message}</div>
         )}
@@ -318,6 +372,7 @@ export function AsistenciaPage() {
                     busy={busyKey === k && reportMut.isPending}
                     activeEntry={activeEntry}
                     estado={inscrito?.Estado || inscrito?.estado}
+                    faltasMes={faltasPorParticipante[k] || 0}
                   />
                 );
               })}
@@ -340,6 +395,8 @@ export function AsistenciaPage() {
               <span className="fw-semibold">Configura VITE_SUPPORT_WHATSAPP en el .env</span>
             )}
           </div>
+        )}
+          </>
         )}
       </div>
 

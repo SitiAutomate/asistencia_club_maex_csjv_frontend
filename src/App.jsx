@@ -9,6 +9,7 @@ import { ResetPasswordPage } from './pages/ResetPasswordPage.jsx';
 import { ResetDonePage } from './pages/ResetDonePage.jsx';
 import { VerifyEmailPage } from './pages/VerifyEmailPage.jsx';
 import { RequireAuth } from './components/layout/RequireAuth.jsx';
+import { RequireNavView } from './components/layout/RequireNavView.jsx';
 import { AppShell } from './components/layout/AppShell.jsx';
 import { HomeRedirect } from './pages/HomeRedirect.jsx';
 import { AsistenciaPage } from './pages/asistencia/AsistenciaPage.jsx';
@@ -17,6 +18,7 @@ import { InformacionPage } from './pages/asistencia/InformacionPage.jsx';
 import { GestionRubricasPage } from './pages/asistencia/GestionRubricasPage.jsx';
 import { ReportesPage } from './pages/asistencia/ReportesPage.jsx';
 import { AdministradorPage } from './pages/asistencia/AdministradorPage.jsx';
+import { LvlupPage } from './pages/lvlup/LvlupPage.jsx';
 import { DocumentacionPage } from './pages/documentacion/DocumentacionPage.jsx';
 
 export default function App() {
@@ -36,12 +38,13 @@ export default function App() {
         <Route element={<RequireAuth />}>
           <Route path="/" element={<AppShell />}>
             <Route index element={<HomeRedirect />} />
-            <Route path="asistencia" element={<AsistenciaPage />} />
-            <Route path="historial" element={<HistorialPage />} />
-            <Route path="informacion" element={<InformacionPage />} />
-            <Route path="rubricas" element={<GestionRubricasPage />} />
-            <Route path="reportes" element={<ReportesPage />} />
-            <Route path="administrador" element={<AdministradorPage />} />
+            <Route path="asistencia" element={<RequireNavView navKey="asistencia"><AsistenciaPage /></RequireNavView>} />
+            <Route path="historial" element={<RequireNavView navKey="historial"><HistorialPage /></RequireNavView>} />
+            <Route path="informacion" element={<RequireNavView navKey="informacion"><InformacionPage /></RequireNavView>} />
+            <Route path="rubricas" element={<RequireNavView navKey="rubricas"><GestionRubricasPage /></RequireNavView>} />
+            <Route path="reportes" element={<RequireNavView navKey="reportes"><ReportesPage /></RequireNavView>} />
+            <Route path="administrador" element={<RequireNavView navKey="administrador"><AdministradorPage /></RequireNavView>} />
+            <Route path="lvlup" element={<RequireNavView navKey="lvlup"><LvlupPage /></RequireNavView>} />
             <Route path="documentacion" element={<DocumentacionPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>

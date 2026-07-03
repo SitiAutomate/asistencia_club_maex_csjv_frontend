@@ -168,6 +168,7 @@ export function InformacionPage() {
       const u = new URLSearchParams({
         estado: 'CONFIRMADO,INCAPACITADO,RETIRADO',
         withRutaExtra: 'false',
+        scope: 'informacion',
       });
       if (effectiveCursoId) u.set('idCurso', effectiveCursoId);
       return getJson(`/api/inscritos?${u.toString()}`);

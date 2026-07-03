@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useOutletContext } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { apiFetch, apiUrl, getJson } from '../../lib/api.js';
+import { apiFetch, fetchAuthenticatedImageObjectUrl, getJson } from '../../lib/api.js';
 import { getDefaultAppPath, isNavKeyEnabled } from '../../lib/navFeatures.js';
 import { getDocumento, getNombreCompleto } from '../../lib/inscritoHelpers.js';
 import { normalizeForSearch } from '../../lib/normalizeSearch.js';
@@ -67,10 +67,6 @@ function revokeObjectUrlIfBlob(url) {
   }
 }
 
-/**
- * URL para <img>: siempre ruta bajo el mismo origen del SPA (/uploads/...), con proxy en dev.
- * Evita cross-origin + CORP y URLs absolutas al API cuando VITE_API_URL apunta a otro host.
- */
 function mensajeVentanaEnvioInforme(ventana) {
   if (!ventana) return '';
   if (ventana.envioCorreosFamiliaHabilitado === false) {
@@ -92,18 +88,6 @@ function mensajeVentanaEnvioInforme(ventana) {
       : 'Ya se cumplió la fecha de envío de informes por correo.';
   }
   return 'No es posible enviar informes por correo en este momento.';
-}
-
-function evaluacionFotoSrc(foto) {
-  if (foto == null) return '';
-  const s = String(foto).trim();
-  if (!s) return '';
-  if (/^https?:\/\//i.test(s)) {
-    return s;
-  }
-  const p = s.startsWith('/') ? s : `/${s}`;
-  if (p.startsWith('/uploads')) return apiUrl(p);
-  return p;
 }
 
 function SuccessModal({
@@ -476,7 +460,7 @@ export function ReportesPage() {
     revokeObjectUrlIfBlob(previewUrl);
     const fotoGuardada = String(evaluacion.foto || '').trim();
     setEditingFotoPath(fotoGuardada);
-    setPreviewUrl(evaluacionFotoSrc(fotoGuardada));
+    void fetchAuthenticatedImageObjectUrl(fotoGuardada).then(setPreviewUrl);
     const nextLevels = {};
     (evaluacion.detalles || []).forEach((d) => {
       nextLevels[d.id_rubrica] = nivelFromDb(d.valor);
@@ -967,7 +951,7 @@ export function ReportesPage() {
                           if (!file) {
                             setFotoFile(null);
                             if (editingEvalId && editingFotoPath) {
-                              setPreviewUrl(evaluacionFotoSrc(editingFotoPath));
+                              void fetchAuthenticatedImageObjectUrl(editingFotoPath).then(setPreviewUrl);
                             } else {
                               setPreviewUrl((prev) => {
                                 revokeObjectUrlIfBlob(prev);

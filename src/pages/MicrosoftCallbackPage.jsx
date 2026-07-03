@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
-import { postJson, setStoredToken } from '../lib/api';
+import { postJson, setSessionToken } from '../lib/api';
 
 /** Debe coincidir con MICROSOFT_REDIRECT_URI del backend (no con window.location si difiere). */
 const redirectUriDefault = import.meta.env.VITE_MICROSOFT_REDIRECT_URI ||
@@ -14,16 +14,19 @@ export function MicrosoftCallbackPage() {
   const oauthError = params.get('error');
   const oauthErrorDesc = params.get('error_description');
   const code = params.get('code');
+  const state = params.get('state');
 
   const exchange = useMutation({
     mutationFn: (authorizationCode) =>
       postJson('/api/auth/microsoft/token', {
         code: authorizationCode,
+        state: state || sessionStorage.getItem('ms_oauth_state') || '',
         redirect_uri: redirectUriDefault,
       }),
     onSuccess: (data) => {
+      sessionStorage.removeItem('ms_oauth_state');
       if (data?.accessToken) {
-        setStoredToken(data.accessToken);
+        setSessionToken(data.accessToken);
         navigate('/', { replace: true });
       }
     },

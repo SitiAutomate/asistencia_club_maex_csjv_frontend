@@ -11,7 +11,7 @@ export function LoginPage() {
   const [tab, setTab] = useState('entrenador');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [remember, setRemember] = useState(true);
+  const [remember, setRemember] = useState(false);
 
   const loginMutation = useMutation({
     mutationFn: () => postJson('/api/auth/login', { email: email.trim().toLowerCase(), password }),
@@ -28,10 +28,13 @@ export function LoginPage() {
   const microsoftMutation = useMutation({
     mutationFn: async () => {
       const data = await getJson('/api/auth/microsoft/url');
-      return data?.url;
+      return data;
     },
-    onSuccess: (url) => {
-      if (url) window.location.assign(url);
+    onSuccess: (data) => {
+      if (data?.state) {
+        sessionStorage.setItem('ms_oauth_state', String(data.state));
+      }
+      if (data?.url) window.location.assign(data.url);
     },
   });
 

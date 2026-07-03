@@ -27,6 +27,7 @@
   box-shadow: 4px 0 24px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .att-sidebar.is-open {
@@ -34,21 +35,32 @@
 }
 
 .att-sidebar__profile {
-  padding: 1rem;
+  padding: 2.75rem 1rem 1rem;
   border-bottom: 1px solid #e5e7eb;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.65rem 0.75rem;
   position: relative;
+  align-items: start;
 }
 
 .att-sidebar__close {
-  margin-left: auto;
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  margin: 0;
   border: none;
   background: none;
   color: #94a3b8;
-  padding: 0.2rem;
-  border-radius: 0.3rem;
+  padding: 0.25rem;
+  border-radius: 0.35rem;
+  line-height: 0;
+  flex-shrink: 0;
+}
+
+.att-sidebar:not(.is-open) .att-sidebar__close {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .att-sidebar__close:hover {
@@ -66,11 +78,43 @@
   align-items: center;
   justify-content: center;
   font-weight: 700;
+  flex-shrink: 0;
+  grid-row: span 3;
+  align-self: start;
+}
+
+.att-sidebar__profile-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding-right: 1.5rem;
+}
+
+.att-sidebar__name {
+  font-weight: 600;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  color: #0f2747;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.att-sidebar__email {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: #64748b;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .att-sidebar__role {
-  color: #0f2747;
+  margin-top: 0.15rem;
+  color: #1a6fd4;
   font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 .att-sidebar__nav {
@@ -107,4 +151,3 @@
   padding: 1rem;
   border-top: 1px solid #e5e7eb;
 }
-

@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getJson, setStoredToken } from '../../lib/api.js';
 import { queryClient } from '../../lib/queryClient.js';
-import { getEnabledNavItems } from '../../lib/navFeatures.js';
+import { getNavItemsForUser, getRoleLabel } from '../../lib/navFeatures.js';
 import { IconClose, IconMenu } from '../asistencia/AttendanceIcons.jsx';
 import '../../styles/asistencia/index.css';
 
@@ -17,6 +17,7 @@ const ROUTE_TITLES = {
   '/rubricas': 'Gestión de rúbricas',
   '/reportes': 'Reportes',
   '/administrador': 'Administrador',
+  '/lvlup': 'LVL UP',
   '/documentacion': 'Documentación',
 };
 
@@ -37,10 +38,11 @@ export function AppShell() {
     String(user?.rol || '').trim() === 'Desarrollador' ||
     String(user?.rol || '').trim() === 'Administrador';
 
-  const navItems = getEnabledNavItems().filter(
-    (item) =>
-      item.key !== 'administrador' || String(user?.rol || '').trim() === 'Administrador',
-  );
+  const navItems = getNavItemsForUser(user);
+
+  const displayName = String(user?.nombre || '').trim();
+  const email = String(user?.email || '').trim();
+  const showEmail = email && email.toLowerCase() !== displayName.toLowerCase();
 
   if (meQuery.isPending) {
     return (
@@ -81,11 +83,6 @@ export function AppShell() {
       />
       <aside className={`att-sidebar ${sidebarOpen ? 'is-open' : ''}`} aria-label="Menú principal">
         <div className="att-sidebar__profile">
-          <div className="att-sidebar__avatar">{initial}</div>
-          <div>
-            <div className="fw-semibold small">{user?.nombre || user?.email || 'Usuario'}</div>
-            <div className="small att-sidebar__role">{user?.rol || ''}</div>
-          </div>
           <button
             type="button"
             className="att-sidebar__close"
@@ -94,6 +91,20 @@ export function AppShell() {
           >
             <IconClose />
           </button>
+          <div className="att-sidebar__avatar">{initial}</div>
+          <div className="att-sidebar__profile-text">
+            <div className="att-sidebar__name" title={displayName || email || 'Usuario'}>
+              {displayName || email || 'Usuario'}
+            </div>
+            {showEmail ? (
+              <div className="att-sidebar__email" title={email}>
+                {email}
+              </div>
+            ) : null}
+            {user?.rol ? (
+              <div className="att-sidebar__role">{getRoleLabel(user.rol)}</div>
+            ) : null}
+          </div>
         </div>
         <nav className="att-sidebar__nav">
           {navItems.map((item) => (

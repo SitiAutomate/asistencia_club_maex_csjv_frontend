@@ -67,11 +67,14 @@ export function DocumentacionPage() {
   const openSwagger = () => {
     const token = getStoredToken();
     if (!token) return;
-    window.open(
-      `${apiUrl('/api-docs')}?access_token=${encodeURIComponent(token)}`,
-      '_blank',
-      'noopener,noreferrer',
-    );
+    const popup = window.open(apiUrl('/api-docs/swagger-auth-bridge.html'), '_blank');
+    if (!popup) return;
+    const onMessage = (event) => {
+      if (event.source !== popup || event.data?.type !== 'swagger-auth-ready') return;
+      popup.postMessage({ type: 'swagger-auth-token', token }, '*');
+      window.removeEventListener('message', onMessage);
+    };
+    window.addEventListener('message', onMessage);
   };
 
   const exportPdf = () => {

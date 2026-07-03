@@ -20,6 +20,7 @@ export function ParticipantCard({
   busy,
   activeEntry,
   estado,
+  faltasMes = 0,
 }) {
   const nombre = getNombreCompleto(inscrito);
   const curso = getCursoNombre(inscrito);
@@ -28,10 +29,11 @@ export function ParticipantCard({
   const activeReport = activeEntry?.reporte || null;
   const estadoNormalizado = String(estado || '').toUpperCase();
   const canReport = estadoNormalizado === 'CONFIRMADO' || estadoNormalizado === 'ACTIVO';
+  const alertaFaltas = faltasMes >= 2;
 
   return (
     <article
-      className="att-card"
+      className={`att-card${alertaFaltas ? ' att-card--alerta-faltas' : ''}`}
       onClick={() => onOpenDetail(inscrito)}
       role="button"
       tabIndex={0}
@@ -42,6 +44,7 @@ export function ParticipantCard({
         }
       }}
     >
+      <div className="att-card__row">
       <div className="att-card__accent" aria-hidden="true" />
       <div className="att-card__body">
         <h3 className="att-card__name">{nombre || 'Sin nombre'}</h3>
@@ -107,6 +110,17 @@ export function ParticipantCard({
           <span className="att-status-pill">{estadoNormalizado || 'SIN ESTADO'}</span>
         )}
       </div>
+      </div>
+      {alertaFaltas ? (
+        <div className="att-card__faltas-alert" role="status">
+          <span className="att-card__faltas-alert-badge" aria-hidden="true">
+            !
+          </span>
+          <span>
+            <strong>{faltasMes} faltas este mes.</strong> Contactar a la familia.
+          </span>
+        </div>
+      ) : null}
     </article>
   );
 }

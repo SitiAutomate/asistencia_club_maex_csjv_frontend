@@ -1,5 +1,5 @@
 import { Navigate, useOutletContext } from 'react-router-dom';
-import { getDefaultAppPath, isNavKeyEnabled } from '../lib/navFeatures.js';
+import { getDefaultAppPathForUser, isNavKeyEnabled } from '../lib/navFeatures.js';
 
 /** Redirige la raíz autenticada a la primera vista habilitada en .env */
 export function HomeRedirect() {
@@ -8,5 +8,5 @@ export function HomeRedirect() {
   if (isAdmin && isNavKeyEnabled('administrador')) {
     return <Navigate to="/administrador" replace />;
   }
-  return <Navigate to={getDefaultAppPath()} replace />;
+  return <Navigate to={getDefaultAppPathForUser(user)} replace />;
 }
