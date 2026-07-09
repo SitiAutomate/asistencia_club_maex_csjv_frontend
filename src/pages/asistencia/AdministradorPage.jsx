@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useOutletContext } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { apiUrl, getJson } from '../../lib/api.js';
+import { getJson, openAuthenticatedUpload } from '../../lib/api.js';
 import { getDefaultAppPath, isNavKeyEnabled } from '../../lib/navFeatures.js';
 import { normalizeForSearch } from '../../lib/normalizeSearch.js';
 import {
@@ -722,7 +722,11 @@ export function AdministradorPage() {
                         type="button"
                         className="btn btn-outline-primary btn-sm py-0 px-2"
                         title="Ver informe"
-                        onClick={() => window.open(apiUrl(row.informe), '_blank', 'noopener,noreferrer')}
+                        onClick={() => {
+                          openAuthenticatedUpload(row.informe).catch((err) => {
+                            window.alert(err?.message || 'No se pudo abrir el informe');
+                          });
+                        }}
                       >
                         Ver
                       </button>

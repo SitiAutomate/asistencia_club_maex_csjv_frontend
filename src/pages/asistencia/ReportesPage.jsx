@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useOutletContext } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { apiFetch, fetchAuthenticatedImageObjectUrl, getJson } from '../../lib/api.js';
+import { apiFetch, fetchAuthenticatedImageObjectUrl, getJson, openAuthenticatedUpload } from '../../lib/api.js';
 import { getDefaultAppPath, isNavKeyEnabled } from '../../lib/navFeatures.js';
 import { getDocumento, getNombreCompleto } from '../../lib/inscritoHelpers.js';
 import { normalizeForSearch } from '../../lib/normalizeSearch.js';
@@ -874,7 +874,15 @@ export function ReportesPage() {
                             disabled={!e.informe}
                             onClick={(evt) => {
                               evt.stopPropagation();
-                              if (e.informe) window.open(apiUrl(e.informe), '_blank', 'noopener,noreferrer');
+                              if (!e.informe) return;
+                              openAuthenticatedUpload(e.informe).catch((err) => {
+                                setToastState({
+                                  show: true,
+                                  type: 'danger',
+                                  message: err?.message || 'No se pudo abrir el informe',
+                                });
+                                window.setTimeout(() => setToastState((prev) => ({ ...prev, show: false })), 2600);
+                              });
                             }}
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" width="16" height="16" fill="currentColor">
@@ -1082,7 +1090,17 @@ export function ReportesPage() {
       <SuccessModal
         open={Boolean(successData)}
         onClose={() => setSuccessData(null)}
-        onViewPdf={() => successData?.informe && window.open(apiUrl(successData.informe), '_blank', 'noopener,noreferrer')}
+        onViewPdf={() => {
+          if (!successData?.informe) return;
+          openAuthenticatedUpload(successData.informe).catch((err) => {
+            setToastState({
+              show: true,
+              type: 'danger',
+              message: err?.message || 'No se pudo abrir el informe',
+            });
+            window.setTimeout(() => setToastState((prev) => ({ ...prev, show: false })), 2600);
+          });
+        }}
         onSendMail={() => {
           if (!successData?.id) return;
           enviarMutation.mutate({
