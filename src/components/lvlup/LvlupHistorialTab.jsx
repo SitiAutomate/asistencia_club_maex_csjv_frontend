@@ -87,7 +87,7 @@ export function LvlupHistorialTab({ isAdmin, maestros = [], asignaciones = [] })
       if (asignacionId) p.set('asignacionId', asignacionId);
       return getJson(`/api/lvlup/historial?${p}`);
     },
-    staleTime: 30_000,
+    staleTime: 90_000,
   });
 
   const registros = historialQuery.data?.registros || [];

@@ -48,6 +48,7 @@ export function LvlupPage() {
     queryKey: ['lvlup-maestros'],
     queryFn: () => getJson('/api/lvlup/maestros'),
     enabled: canAccess && isAdmin,
+    staleTime: 5 * 60_000,
   });
 
   const asignacionesQuery = useQuery({
@@ -59,6 +60,7 @@ export function LvlupPage() {
       return getJson(qs ? `/api/lvlup/asignaciones?${qs}` : '/api/lvlup/asignaciones');
     },
     enabled: canAccess,
+    staleTime: 2 * 60_000,
   });
 
   const asignaciones = asignacionesQuery.data?.asignaciones || [];
@@ -71,6 +73,7 @@ export function LvlupPage() {
     queryKey: ['lvlup-participantes', asignacionId],
     queryFn: () => getJson(`/api/lvlup/asignaciones/${asignacionId}/participantes`),
     enabled: Boolean(asignacionId),
+    staleTime: 90_000,
   });
 
   const participantes = participantesQuery.data?.participantes || [];
