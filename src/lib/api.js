@@ -155,34 +155,54 @@ export async function openAuthenticatedUpload(uploadPath) {
     throw new Error('Sesión expirada. Inicia sesión de nuevo.');
   }
 
-  const res = await fetch(apiUrl(path), {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-
-  if (!res.ok) {
-    if (res.status === 401) {
-      markSessionEnded('unauthorized');
-      clearStoredToken();
-      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-        window.location.replace('/login');
-      }
-    }
-    let message = 'No se pudo abrir el archivo';
-    try {
-      const data = await res.json();
-      message = data?.message || message;
-    } catch {
-      /* respuesta no JSON (p. ej. HTML de error) */
-    }
-    throw new Error(message);
-  }
-
-  const blob = await res.blob();
-  const objectUrl = URL.createObjectURL(blob);
-  const popup = window.open(objectUrl, '_blank', 'noopener,noreferrer');
+  // Debe abrirse en el mismo clic del usuario (antes de cualquier await).
+  // Si se abre tras fetch(), Chrome/Safari lo tratan como popup no solicitado.
+  const popup = window.open('about:blank', '_blank');
   if (!popup) {
-    URL.revokeObjectURL(objectUrl);
     throw new Error('El navegador bloqueó la ventana emergente. Permite popups para este sitio.');
   }
-  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 120_000);
+  popup.opener = null;
+  try {
+    popup.document.title = 'Cargando informe…';
+    popup.document.body.innerHTML =
+      '<p style="font-family:system-ui,sans-serif;padding:2rem;color:#333">Cargando informe…</p>';
+  } catch {
+    /* algunos navegadores restringen document en about:blank */
+  }
+
+  try {
+    const res = await fetch(apiUrl(path), {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) {
+      if (res.status === 401) {
+        markSessionEnded('unauthorized');
+        clearStoredToken();
+        if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+          window.location.replace('/login');
+        }
+      }
+      let message = 'No se pudo abrir el archivo';
+      try {
+        const data = await res.json();
+        message = data?.message || message;
+      } catch {
+        /* respuesta no JSON */
+      }
+      throw new Error(message);
+    }
+
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    popup.location.replace(objectUrl);
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 120_000);
+  } catch (error) {
+    try {
+      popup.close();
+    } catch {
+      /* ignore */
+    }
+    throw error;
+  }
 }
