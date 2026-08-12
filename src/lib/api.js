@@ -86,7 +86,27 @@ export async function apiFetch(path, options = {}) {
   if (token && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token}`);
   }
-  const res = await fetch(apiUrl(path), { ...options, headers });
+
+  let res;
+  try {
+    res = await fetch(apiUrl(path), { ...options, headers });
+  } catch (networkError) {
+    const raw = String(networkError?.message || '');
+    const isLoadFailed =
+      /load failed/i.test(raw) ||
+      /failed to fetch/i.test(raw) ||
+      /networkerror/i.test(raw) ||
+      networkError?.name === 'TypeError';
+    const err = new Error(
+      isLoadFailed
+        ? 'No se pudo conectar con el servidor. Revisa la red (WiFi del colegio puede bloquear la API), usa otra red o recarga la página.'
+        : raw || 'Error de red',
+    );
+    err.status = 0;
+    err.cause = networkError;
+    throw err;
+  }
+
   const text = await res.text();
   let data = null;
   try {
