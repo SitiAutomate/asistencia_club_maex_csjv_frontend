@@ -97,7 +97,9 @@ export function LoginPage() {
           }}
         >
           <h2 className="auth-section-title mb-1">Iniciar sesión — Proveedor</h2>
-          <p className="auth-muted mb-3">Ingresa tu correo y contraseña.</p>
+          <p className="auth-muted mb-3">
+            Correo y contraseña. Si tu correo está en maestros LVL UP, entrarás a ese módulo.
+          </p>
 
           <div className="mb-3">
             <label htmlFor="login-email" className="form-label small fw-semibold mb-1">
