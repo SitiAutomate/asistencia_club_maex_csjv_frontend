@@ -343,6 +343,9 @@
 @media (max-width: 767px) {
   .att-main {
     padding: 0.65rem;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
   }
 
   .att-history-card {
@@ -511,5 +514,17 @@
     content: attr(data-label) ': ';
     font-weight: 700;
     color: #475569;
+  }
+
+  .att-admin-table-wrap--mobile-safe .att-admin-table td:not([data-label])::before,
+  .att-admin-table-wrap--mobile-safe .att-admin-table td[data-label='']::before {
+    content: none;
+  }
+
+  .att-admin-table-wrap--mobile-safe .att-admin-table td[data-label=''] {
+    padding-top: 0.45rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.25rem;
   }
 }

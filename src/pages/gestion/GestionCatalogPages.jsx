@@ -553,10 +553,9 @@ export function GestionParticipantesPage() {
   ];
 
   return (
-    <div className="att-main att-main--wide att-admin-page">
-      <div className="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
-        <h2 className="h5 fw-bold mb-0 att-admin-page__title">Participantes</h2>
-        <div className="d-flex flex-wrap align-items-center gap-2">
+    <div className="att-main att-main--wide att-admin-page att-gestion-page">
+      <div className="att-gestion-page__toolbar">
+        <div className="att-gestion-page__actions">
           <GestionPanelModeToggle />
           <GestionNav />
         </div>
@@ -564,7 +563,7 @@ export function GestionParticipantesPage() {
       <div className="mb-3">
         <input
           className="form-control form-control-sm"
-          style={{ maxWidth: 360 }}
+          style={{ maxWidth: '100%', width: '100%' }}
           placeholder="Buscar por nombre o documento…"
           value={q}
           onChange={(e) => {
@@ -576,8 +575,8 @@ export function GestionParticipantesPage() {
       {query.isError ? <div className="alert alert-danger small">{query.error?.message}</div> : null}
 
       <div className="card border-0 shadow-sm">
-        <div className="table-responsive">
-          <table className="table table-sm table-hover mb-0">
+        <div className="table-responsive att-admin-table-wrap--mobile-safe">
+          <table className="table table-sm table-hover mb-0 att-admin-table att-gestion-table">
             <thead>
               <tr>
                 <th>Documento</th>
@@ -602,16 +601,16 @@ export function GestionParticipantesPage() {
               ) : null}
               {rows.map((r) => (
                 <tr
-                  key={r.documento}
+                  key={r.documento || `p-${r.nombreCompleto}`}
                   className={`att-split-row ${selectedDoc === r.documento ? 'is-selected' : ''}`}
                   style={{ cursor: 'pointer' }}
                   onClick={() => setSelectedDoc(r.documento)}
                 >
-                  <td>{r.documento}</td>
-                  <td>{r.nombreCompleto}</td>
-                  <td>{r.grupo || '—'}</td>
-                  <td>{r.nombreResponsable || r.idResponsable || '—'}</td>
-                  <td onClick={(e) => e.stopPropagation()}>
+                  <td data-label="Documento">{r.documento}</td>
+                  <td data-label="Nombre">{r.nombreCompleto}</td>
+                  <td data-label="Grupo">{r.grupo || '—'}</td>
+                  <td data-label="Responsable">{r.nombreResponsable || r.idResponsable || '—'}</td>
+                  <td data-label="" onClick={(e) => e.stopPropagation()}>
                     {canEdit ? (
                       <button
                         type="button"
@@ -631,11 +630,11 @@ export function GestionParticipantesPage() {
             </tbody>
           </table>
         </div>
-        <div className="card-footer d-flex justify-content-between small">
-          <span>{meta.total} registros</span>
-          <div className="d-flex gap-2">
+        <div className="card-footer d-flex flex-column flex-sm-row justify-content-between align-items-stretch align-items-sm-center gap-2 small">
+          <span className="text-center text-sm-start">{meta.total} registros</span>
+          <div className="d-flex gap-2 justify-content-center justify-content-sm-end align-items-center">
             <button type="button" className="btn btn-outline-secondary btn-sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Anterior</button>
-            <span>Pág. {meta.page} / {meta.totalPages}</span>
+            <span className="text-nowrap">Pág. {meta.page} / {meta.totalPages}</span>
             <button type="button" className="btn btn-outline-secondary btn-sm" disabled={page >= meta.totalPages} onClick={() => setPage((p) => p + 1)}>Siguiente</button>
           </div>
         </div>
@@ -1004,10 +1003,9 @@ export function GestionResponsablesPage() {
     : {};
 
   return (
-    <div className="att-main att-main--wide att-admin-page">
-      <div className="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
-        <h2 className="h5 fw-bold mb-0 att-admin-page__title">Responsables</h2>
-        <div className="d-flex flex-wrap align-items-center gap-2">
+    <div className="att-main att-main--wide att-admin-page att-gestion-page">
+      <div className="att-gestion-page__toolbar">
+        <div className="att-gestion-page__actions">
           <GestionPanelModeToggle />
           <GestionNav />
         </div>
@@ -1015,7 +1013,7 @@ export function GestionResponsablesPage() {
       <div className="mb-3">
         <input
           className="form-control form-control-sm"
-          style={{ maxWidth: 360 }}
+          style={{ maxWidth: '100%', width: '100%' }}
           placeholder="Buscar…"
           value={q}
           onChange={(e) => {
@@ -1027,8 +1025,8 @@ export function GestionResponsablesPage() {
       {query.isError ? <div className="alert alert-danger small">{query.error?.message}</div> : null}
 
       <div className="card border-0 shadow-sm">
-        <div className="table-responsive">
-          <table className="table table-sm table-hover mb-0">
+        <div className="table-responsive att-admin-table-wrap--mobile-safe">
+          <table className="table table-sm table-hover mb-0 att-admin-table att-gestion-table">
             <thead>
               <tr>
                 <th>Documento</th>
@@ -1053,16 +1051,16 @@ export function GestionResponsablesPage() {
               ) : null}
               {rows.map((r) => (
                 <tr
-                  key={r.documento}
+                  key={r.documento || `r-${r.nombreCompleto}`}
                   className={`att-split-row ${selectedDoc === r.documento ? 'is-selected' : ''}`}
                   style={{ cursor: 'pointer' }}
                   onClick={() => setSelectedDoc(r.documento)}
                 >
-                  <td>{r.documento}</td>
-                  <td>{r.nombreCompleto}</td>
-                  <td>{r.celular || '—'}</td>
-                  <td>{r.correo || '—'}</td>
-                  <td onClick={(e) => e.stopPropagation()}>
+                  <td data-label="Documento">{r.documento}</td>
+                  <td data-label="Nombre">{r.nombreCompleto}</td>
+                  <td data-label="Celular">{r.celular || '—'}</td>
+                  <td data-label="Correo">{r.correo || '—'}</td>
+                  <td data-label="" onClick={(e) => e.stopPropagation()}>
                     {canEdit ? (
                       <button
                         type="button"
@@ -1082,11 +1080,11 @@ export function GestionResponsablesPage() {
             </tbody>
           </table>
         </div>
-        <div className="card-footer d-flex justify-content-between small">
-          <span>{meta.total} registros</span>
-          <div className="d-flex gap-2">
+        <div className="card-footer d-flex flex-column flex-sm-row justify-content-between align-items-stretch align-items-sm-center gap-2 small">
+          <span className="text-center text-sm-start">{meta.total} registros</span>
+          <div className="d-flex gap-2 justify-content-center justify-content-sm-end align-items-center">
             <button type="button" className="btn btn-outline-secondary btn-sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Anterior</button>
-            <span>Pág. {meta.page} / {meta.totalPages}</span>
+            <span className="text-nowrap">Pág. {meta.page} / {meta.totalPages}</span>
             <button type="button" className="btn btn-outline-secondary btn-sm" disabled={page >= meta.totalPages} onClick={() => setPage((p) => p + 1)}>Siguiente</button>
           </div>
         </div>
@@ -1313,16 +1311,15 @@ export function GestionCursosCatalogPage() {
   };
 
   return (
-    <div className="att-main att-main--wide att-admin-page">
-      <div className="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
-        <h2 className="h5 fw-bold mb-0 att-admin-page__title">Cursos</h2>
-        <div className="d-flex flex-wrap align-items-center gap-2">
+    <div className="att-main att-main--wide att-admin-page att-gestion-page">
+      <div className="att-gestion-page__toolbar">
+        <div className="att-gestion-page__actions">
           <GestionPanelModeToggle />
           <GestionNav />
         </div>
       </div>
       <div className="row g-2 mb-3">
-        <div className="col-md-2">
+        <div className="col-6 col-md-2">
           <SearchableSelect
             value={tipo}
             onChange={(v) => {
@@ -1333,7 +1330,7 @@ export function GestionCursosCatalogPage() {
             allowClear={false}
           />
         </div>
-        <div className="col-md-2">
+        <div className="col-6 col-md-2">
           <SearchableSelect
             value={sedeFiltro}
             onChange={setSedeFiltro}
@@ -1341,7 +1338,7 @@ export function GestionCursosCatalogPage() {
             placeholder="Sede…"
           />
         </div>
-        <div className="col-md-2">
+        <div className="col-6 col-md-2">
           <SearchableSelect
             value={estadoFiltro}
             onChange={setEstadoFiltro}
@@ -1349,7 +1346,7 @@ export function GestionCursosCatalogPage() {
             placeholder="Estado…"
           />
         </div>
-        <div className="col-md-3">
+        <div className="col-12 col-sm-6 col-md-3">
           <SearchableSelect
             value={actividadFiltro}
             onChange={setActividadFiltro}
@@ -1357,7 +1354,7 @@ export function GestionCursosCatalogPage() {
             placeholder="Actividad…"
           />
         </div>
-        <div className="col-md-3">
+        <div className="col-12 col-sm-6 col-md-3">
           <input
             className="form-control form-control-sm"
             placeholder="Buscar curso…"
@@ -1378,8 +1375,8 @@ export function GestionCursosCatalogPage() {
       {query.isError ? <div className="alert alert-danger small">{query.error?.message}</div> : null}
 
       <div className="card border-0 shadow-sm">
-        <div className="table-responsive">
-          <table className="table table-sm table-hover mb-0 att-cursos-table">
+        <div className="table-responsive att-admin-table-wrap--mobile-safe">
+          <table className="table table-sm table-hover mb-0 att-admin-table att-gestion-table att-cursos-table">
             <thead>
               <tr>
                 <th>ID</th>
@@ -1416,18 +1413,18 @@ export function GestionCursosCatalogPage() {
                     style={{ cursor: 'pointer' }}
                     onClick={() => setSelectedId(c.id)}
                   >
-                    <td>{c.id}</td>
-                    <td>{c.nombre}</td>
-                    <td>{c.sede || '—'}</td>
-                    <td>{formatCurrencyCop(c.tarifa)}</td>
-                    <td>
+                    <td data-label="ID">{c.id}</td>
+                    <td data-label="Nombre">{c.nombre}</td>
+                    <td data-label="Sede">{c.sede || '—'}</td>
+                    <td data-label="Tarifa">{formatCurrencyCop(c.tarifa)}</td>
+                    <td data-label="Cupos">
                       <span className="att-cupos-pill">
                         {c.cuposLlenos ?? 0}
                         {max != null ? ` / ${max}` : ''}
                       </span>
                     </td>
-                    <td>{c.estado || '—'}</td>
-                    <td onClick={(e) => e.stopPropagation()}>
+                    <td data-label="Estado">{c.estado || '—'}</td>
+                    <td data-label="" onClick={(e) => e.stopPropagation()}>
                       {canEdit ? (
                         <button
                           type="button"

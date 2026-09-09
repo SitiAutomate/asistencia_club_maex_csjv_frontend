@@ -40,12 +40,17 @@ export function SlideDrawer({
 
   if (!open) return null;
 
+  const drawerWidth =
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 991.98px)').matches
+      ? '100%'
+      : `min(${width}px, 100%)`;
+
   return createPortal(
     <div className={`att-drawer-root ${entered ? 'is-entered' : ''}`}>
       <button type="button" className="att-drawer-scrim" aria-label="Cerrar panel" onClick={onClose} />
       <aside
         className="att-drawer"
-        style={{ width: `min(${width}px, 100vw)` }}
+        style={{ width: drawerWidth }}
         role="dialog"
         aria-modal="true"
       >

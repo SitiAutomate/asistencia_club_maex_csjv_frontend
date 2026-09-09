@@ -631,10 +631,7 @@ export function GestionRubricasPage() {
   return (
     <div className="att-main att-main--wide att-rubricas-page">
       <div className="att-history-card">
-        <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
-          <h2 className="h4 m-0 fw-bold" style={{ color: '#3d8dd4' }}>
-            Rúbricas
-          </h2>
+        <div className="d-flex align-items-center justify-content-end flex-wrap gap-2 mb-3">
           <button
             type="button"
             className="btn btn-outline-primary btn-sm"
@@ -646,7 +643,6 @@ export function GestionRubricasPage() {
             + Nueva Rúbrica
           </button>
         </div>
-        <hr className="mt-2 mb-3" />
 
         <div className="att-rubrica-filters mb-3">
           <div>

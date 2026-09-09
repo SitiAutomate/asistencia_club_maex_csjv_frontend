@@ -207,10 +207,9 @@ export function GestionAuditoriaPage() {
   const meta = query.data?.meta || { page: 1, totalPages: 1, total: 0 };
 
   return (
-    <div className="att-main att-main--wide att-admin-page">
-      <div className="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
-        <h2 className="h5 fw-bold mb-0 att-admin-page__title">Auditoría</h2>
-        <div className="d-flex flex-wrap align-items-center gap-2">
+    <div className="att-main att-main--wide att-admin-page att-gestion-page">
+      <div className="att-gestion-page__toolbar">
+        <div className="att-gestion-page__actions">
           <GestionPanelModeToggle />
           <GestionNav />
         </div>
@@ -219,7 +218,7 @@ export function GestionAuditoriaPage() {
         Haz clic en una fila para ver el detalle de lo que cambió (antes → después).
       </p>
       <div className="row g-2 mb-3">
-        <div className="col-md-4">
+        <div className="col-12 col-sm-6 col-md-4">
           <input
             className="form-control form-control-sm"
             placeholder="Buscar email, resumen, acción…"
@@ -230,7 +229,7 @@ export function GestionAuditoriaPage() {
             }}
           />
         </div>
-        <div className="col-md-3">
+        <div className="col-12 col-sm-6 col-md-3">
           <select
             className="form-select form-select-sm"
             value={modulo}
@@ -445,10 +444,9 @@ export function GestionPermisosPage() {
   );
 
   return (
-    <div className="att-main att-main--wide att-admin-page">
-      <div className="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
-        <h2 className="h5 fw-bold mb-0 att-admin-page__title">Permisos</h2>
-        <div className="d-flex flex-wrap align-items-center gap-2">
+    <div className="att-main att-main--wide att-admin-page att-gestion-page">
+      <div className="att-gestion-page__toolbar">
+        <div className="att-gestion-page__actions">
           <GestionPanelModeToggle />
           <GestionNav />
         </div>
@@ -460,7 +458,7 @@ export function GestionPermisosPage() {
         </div>
       ) : null}
       <div className="row g-3">
-        <div className="col-md-4">
+        <div className="col-12 col-lg-4">
           <label className="form-label small">Administrador</label>
           <SearchableSelect
             value={selectedId}
@@ -477,21 +475,21 @@ export function GestionPermisosPage() {
             Marque solo lo necesario y guarde. SuperAdministrador siempre tiene acceso pleno.
           </p>
         </div>
-        <div className="col-md-8">
+        <div className="col-12 col-lg-8">
           {!selectedId ? (
             <div className="text-muted small">Seleccione un administrador para editar permisos.</div>
           ) : (
             <div className="card border-0 shadow-sm">
               <div className="table-responsive">
-                <table className="table table-sm mb-0 align-middle">
+                <table className="table table-sm mb-0 align-middle att-gestion-permisos-table">
                   <thead>
                     <tr>
                       <th>Módulo</th>
-                      <th>Leer</th>
-                      <th>Crear</th>
-                      <th>Editar</th>
-                      <th>Eliminar</th>
-                      <th className="text-end">Fila</th>
+                      <th className="text-center">Leer</th>
+                      <th className="text-center">Crear</th>
+                      <th className="text-center">Editar</th>
+                      <th className="text-center">Eliminar</th>
+                      <th className="text-end d-none d-md-table-cell">Fila</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -510,9 +508,10 @@ export function GestionPermisosPage() {
                           <tr>
                             <td className="small fw-semibold">{row.label}</td>
                             {['leer', 'crear', 'editar', 'eliminar'].map((k) => (
-                              <td key={k}>
+                              <td key={k} className="text-center">
                                 <input
                                   type="checkbox"
+                                  className="form-check-input m-0"
                                   checked={Boolean(row[k])}
                                   onChange={(e) => {
                                     const checked = e.target.checked;
@@ -520,10 +519,11 @@ export function GestionPermisosPage() {
                                       prev.map((r, i) => (i === idx ? { ...r, [k]: checked } : r)),
                                     );
                                   }}
+                                  aria-label={`${row.label} ${k}`}
                                 />
                               </td>
                             ))}
-                            <td className="text-end text-nowrap">
+                            <td className="text-end text-nowrap d-none d-md-table-cell">
                               <button
                                 type="button"
                                 className="btn btn-link btn-sm py-0 px-1"
@@ -667,10 +667,9 @@ export function GestionTipoCamposPage() {
   ];
 
   return (
-    <div className="att-main att-main--wide att-admin-page">
-      <div className="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+    <div className="att-main att-main--wide att-admin-page att-gestion-page">
+      <div className="att-gestion-page__toolbar">
         <div className="d-flex flex-wrap align-items-center gap-2">
-          <h2 className="h5 fw-bold mb-0 att-admin-page__title">Campos por tipo</h2>
           <button
             type="button"
             className="btn btn-primary btn-sm"
@@ -693,7 +692,7 @@ export function GestionTipoCamposPage() {
             Nuevo campo
           </button>
         </div>
-        <div className="d-flex flex-wrap align-items-center gap-2">
+        <div className="att-gestion-page__actions">
           <GestionPanelModeToggle />
           <GestionNav />
         </div>
@@ -703,7 +702,7 @@ export function GestionTipoCamposPage() {
         de otra tabla (ej. asignatura), elija el <strong>catálogo relacionado</strong> para mostrar el
         nombre y poder seleccionarlo en el formulario.
       </p>
-      <div className="mb-3" style={{ maxWidth: 360 }}>
+      <div className="mb-3" style={{ maxWidth: '100%', width: 'min(360px, 100%)' }}>
         <SearchableSelect
           value={tipo}
           onChange={(v) => {

@@ -212,11 +212,6 @@ export function InformacionPage() {
   return (
     <div className="att-main">
       <div className="att-history-card">
-        <h2 className="h4 m-0 fw-bold mb-2" style={{ color: '#3d8dd4' }}>
-          Participantes
-        </h2>
-        <hr className="mt-2 mb-3" />
-
         <div className="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-2 att-info-toolbar att-info-toolbar--filters">
           <div className="d-flex align-items-center gap-2">
             <label className="small mb-0">Curso:</label>

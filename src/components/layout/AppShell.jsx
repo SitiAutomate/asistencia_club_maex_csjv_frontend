@@ -19,10 +19,10 @@ const ROUTE_TITLES = {
   '/asistencia': 'Asistencia',
   '/historial': 'Historial',
   '/informacion': 'Información',
-  '/rubricas': 'Gestión de rúbricas',
+  '/rubricas': 'Rúbricas',
   '/reportes': 'Reportes',
-  '/gestion': 'Inscripciones — Cursos',
-  '/gestion/otros': 'Inscripciones — Otros tipos',
+  '/gestion': 'Inscripciones',
+  '/gestion/otros': 'Otros tipos',
   '/gestion/participantes': 'Participantes',
   '/gestion/responsables': 'Responsables',
   '/gestion/cursos': 'Cursos',
@@ -182,8 +182,9 @@ export function AppShell() {
               }}
             />
           </div>
-          <h1 className="att-header__title">{title}</h1>
-          <div className="att-header__controls" />
+          <h1 className="att-header__title" title={title}>
+            {title}
+          </h1>
         </header>
 
         <Outlet context={{ user }} />

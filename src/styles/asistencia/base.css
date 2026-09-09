@@ -1,8 +1,19 @@
 /* Layout: shell, header, toolbar, main, grid tarjetas, sidebar-adjacent chrome */
 
+html,
+body,
+#root {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
 .att-layout {
+  --att-header-height: 3.6rem;
+
   display: flex;
   min-height: 100dvh;
+  max-width: 100%;
+  overflow-x: clip;
   background: #f0f2f5;
 }
 
@@ -10,13 +21,17 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   padding: 0.75rem 1rem;
   background: #fff;
   border-bottom: 1px solid #e5e7eb;
   position: sticky;
   top: 0;
   z-index: 1020;
+  max-width: 100%;
+  min-width: 0;
+  min-height: var(--att-header-height);
+  box-sizing: border-box;
 }
 
 .att-header__menu {
@@ -47,31 +62,40 @@
 
 .att-header__title {
   flex: 1 1 auto;
-  min-width: 8rem;
+  min-width: 0;
   font-size: 1.15rem;
   font-weight: 700;
   color: var(--auth-blue-dark);
   margin: 0;
-  text-align: center;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.att-header__controls {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex: 1 1 100%;
-  justify-content: flex-end;
-}
-
-@media (min-width: 768px) {
-  .att-header__controls {
-    flex: 0 1 auto;
+@media (min-width: 576px) {
+  .att-header__title {
+    text-align: center;
   }
 }
 
+.att-header__controls:empty {
+  display: none;
+}
+
+.att-header__controls:not(:empty) {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 0 1 auto;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
 .att-select-curso {
-  min-width: 12rem;
-  max-width: 22rem;
+  min-width: 0;
+  max-width: min(22rem, 100%);
+  width: min(100%, 22rem);
   border: 1.5px solid rgba(61, 141, 212, 0.45);
   border-radius: 0.5rem;
   padding: 0.45rem 0.65rem;
@@ -147,7 +171,7 @@
 
 .att-toolbar--sticky {
   position: sticky;
-  top: 3.6rem;
+  top: var(--att-header-height, 3.6rem);
   z-index: 1015;
   margin-top: -1px;
 }
@@ -192,13 +216,22 @@
 }
 
 .att-reportes-page {
-  height: calc(100dvh - 84px);
-  max-height: calc(100dvh - 84px);
+  height: calc(100dvh - var(--att-header-height, 3.6rem));
+  max-height: calc(100dvh - var(--att-header-height, 3.6rem));
   overflow: hidden;
   display: flex;
   flex-direction: column;
   min-height: 0;
   box-sizing: border-box;
+}
+
+@media (max-width: 767.98px) {
+  .att-reportes-page {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    min-height: calc(100dvh - var(--att-header-height, 3.6rem));
+  }
 }
 
 .att-reportes-page > .att-reportes-layout {
@@ -311,6 +344,7 @@
   letter-spacing: 0.02em;
   line-height: 1.25;
   margin: 0 0 0.35rem;
+  overflow-wrap: anywhere;
 }
 
 .att-card__curso {
@@ -428,6 +462,29 @@
   padding: 0.65rem 0.65rem 0.65rem 0;
   flex-shrink: 0;
   border-left: 1px solid #f1f5f9;
+}
+
+@media (max-width: 399.98px) {
+  .att-card__row {
+    flex-direction: column;
+  }
+
+  .att-card__actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    border-left: none;
+    border-top: 1px solid #f1f5f9;
+    padding: 0.55rem 0.75rem 0.75rem;
+  }
+
+  .att-act {
+    flex: 1 1 auto;
+  }
+
+  .att-status-pill {
+    min-width: 0;
+    width: 100%;
+  }
 }
 
 .att-act {

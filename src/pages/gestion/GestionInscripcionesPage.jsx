@@ -1294,7 +1294,6 @@ function DetailModal({ id, onClose, onEdit, onDelete, onOpenFicha, canEdit = tru
 
 export function GestionInscripcionesPage({
   tipoFijo = 1,
-  title = 'Inscripciones — Cursos',
   showOtrosLink = true,
   excludeTipo1 = false,
 }) {
@@ -1446,14 +1445,31 @@ export function GestionInscripcionesPage({
     if (!excludeTipo1 && mes) u.set('mes', mes);
     if (estado && estado !== 'TODOS') u.set('estado', estado);
     if (sede) u.set('sede', sede);
+    if (!excludeTipo1 && actividad) u.set('actividad', actividad);
+    if (idCursoFiltro) u.set('idCurso', idCursoFiltro);
+    if (fechaDesde) u.set('fechaDesde', fechaDesde);
+    if (fechaHasta) u.set('fechaHasta', fechaHasta);
+    if (q.trim()) u.set('q', q.trim());
     return u.toString();
-  }, [anio, effectiveTipo, excludeTipo1, mes, estado, sede]);
+  }, [
+    anio,
+    effectiveTipo,
+    excludeTipo1,
+    mes,
+    estado,
+    sede,
+    actividad,
+    idCursoFiltro,
+    fechaDesde,
+    fechaHasta,
+    q,
+  ]);
 
   const metaQuery = useQuery({
     queryKey: ['gestion-filtros-meta', metaParams],
     queryFn: () => getJson(`/api/gestion/filtros-meta?${metaParams}`),
     enabled: isAdminLike(user) && (tipoFijo != null || Boolean(effectiveTipo)),
-    staleTime: 30_000,
+    staleTime: 15_000,
   });
 
   const anioOptions = useMemo(
@@ -1843,8 +1859,7 @@ export function GestionInscripcionesPage({
       }`}
     >
       <div className="att-gestion-page__top">
-        <div className="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
-          <h2 className="h5 fw-bold mb-0 att-admin-page__title">{title}</h2>
+        <div className="att-gestion-page__toolbar">
           <div className="att-gestion-page__actions">
             {canPaseMes ? (
               <button
@@ -1881,10 +1896,10 @@ export function GestionInscripcionesPage({
         </div>
 
       <section className="att-admin-filters att-gestion-filters card border-0 shadow-sm mb-3">
-        <div className="card-body">
+        <div className="card-body py-2 py-md-3">
           <div className="row g-2 align-items-end">
             {excludeTipo1 ? (
-              <div className="col-12 col-md-3">
+              <div className="col-12 col-sm-6 col-lg-3">
                 <label className="form-label small mb-1">Tipo</label>
                 <SearchableSelect
                   value={tipoSel}
@@ -1900,7 +1915,7 @@ export function GestionInscripcionesPage({
               </div>
             ) : null}
             {!excludeTipo1 ? (
-              <div className="col-6 col-md-2">
+              <div className="col-12 col-sm-4 col-md-3 col-lg-2">
                 <label className="form-label small mb-1">Mes</label>
                 <SearchableSelect
                   value={mes}
@@ -1913,7 +1928,7 @@ export function GestionInscripcionesPage({
                 />
               </div>
             ) : null}
-            <div className="col-6 col-md-2">
+            <div className="col-12 col-sm-4 col-md-3 col-lg-2">
               <label className="form-label small mb-1">Estado</label>
               <SearchableSelect
                 value={estado}
@@ -1925,7 +1940,7 @@ export function GestionInscripcionesPage({
                 allowClear={false}
               />
             </div>
-            <div className={`col-12 ${excludeTipo1 ? 'col-md-4' : 'col-md-5'}`}>
+            <div className={`col-12 col-sm-8 col-md-6 ${excludeTipo1 ? 'col-lg-4' : 'col-lg-5'}`}>
               <label className="form-label small mb-1">Buscar</label>
               <input
                 className="form-control form-control-sm"
@@ -1937,8 +1952,8 @@ export function GestionInscripcionesPage({
                 }}
               />
             </div>
-            <div className="col-12 col-md-3">
-              <label className="form-label small mb-1 d-none d-md-block">&nbsp;</label>
+            <div className="col-12 col-sm-4 col-md-3 col-lg-3">
+              <label className="form-label small mb-1 d-none d-sm-block">&nbsp;</label>
               <button
                 type="button"
                 className={`att-gestion-filters-btn w-100${filtrosAvanzadosActivos ? ' is-active' : ''}`}
@@ -1949,7 +1964,7 @@ export function GestionInscripcionesPage({
                 </span>
                 <span className="att-gestion-filters-btn__copy">
                   <span className="att-gestion-filters-btn__label">Más filtros</span>
-                  <span className="att-gestion-filters-btn__hint">
+                  <span className="att-gestion-filters-btn__hint d-none d-md-inline">
                     {filtrosAvanzadosActivos
                       ? `${filtrosAvanzadosActivos} activo${filtrosAvanzadosActivos === 1 ? '' : 's'}`
                       : 'Año, sede, fechas…'}
@@ -2096,7 +2111,7 @@ export function GestionInscripcionesPage({
 
       <div className="card border-0 shadow-sm att-gestion-table-card">
         <div className="card-body p-0">
-          <div className="table-responsive att-gestion-table-wrap">
+          <div className="table-responsive att-gestion-table-wrap att-admin-table-wrap--mobile-safe">
             <table className="table table-sm table-hover mb-0 att-admin-table att-gestion-table">
               <thead>
                 <tr>
@@ -2131,84 +2146,98 @@ export function GestionInscripcionesPage({
                 ) : null}
                 {rows.map((row) => (
                   <tr key={row.id}>
-                    <td className="text-nowrap">{formatFechaCorta(row.fechaInscripcion)}</td>
-                    <td>
+                    <td className="text-nowrap" data-label="Fecha">{formatFechaCorta(row.fechaInscripcion)}</td>
+                    <td data-label="Participante">
                       <div className="fw-semibold att-gestion-cell-clip">{row.nombreParticipante || '—'}</div>
                       <div className="small text-muted">{row.documentoParticipante}</div>
                     </td>
-                    <td>
+                    <td data-label="Curso">
                       <div className="att-gestion-cell-clip">{row.nombreCurso || row.idCurso}</div>
                       <div className="small text-muted">{row.idCurso}</div>
                     </td>
-                    <td>
+                    <td data-label="Estado">
                       <span className="badge text-bg-light border">{row.estado}</span>
                     </td>
-                    <td className="text-nowrap">{MESES_LABEL[String(row.mes).padStart(2, '0')] || row.mes}</td>
-                    <td className="text-nowrap">{row.año}</td>
-                    <td className="text-nowrap">{row.sede}</td>
-                    <td>{String(row.transporte || '').toUpperCase() === 'SI' ? 'Si' : 'No'}</td>
+                    <td className="text-nowrap" data-label="Mes">{MESES_LABEL[String(row.mes).padStart(2, '0')] || row.mes}</td>
+                    <td className="text-nowrap" data-label="Año">{row.año}</td>
+                    <td className="text-nowrap" data-label="Sede">{row.sede}</td>
+                    <td data-label="Transporte">{String(row.transporte || '').toUpperCase() === 'SI' ? 'Si' : 'No'}</td>
                     {camposLista.map((c) => {
                       const found = (row.camposExtra || []).find((x) => x.campoKey === c.campoKey);
                       return (
-                        <td key={c.campoKey} className="att-gestion-extra-col" title={displayCampoExtra(found)}>
+                        <td
+                          key={c.campoKey}
+                          className="att-gestion-extra-col"
+                          data-label={c.label}
+                          title={displayCampoExtra(found)}
+                        >
                           <span className="att-gestion-cell-clip">
                             {displayCampoExtra(found)}
                           </span>
                         </td>
                       );
                     })}
-                    <td className="text-nowrap att-gestion-actions-col">
+                    <td className="att-gestion-actions-col" data-label="Acciones">
+                      <div className="att-gestion-row-actions">
                       <button
                         type="button"
-                        className="btn btn-link btn-sm py-0 px-1"
+                        className="btn btn-outline-secondary btn-sm att-gestion-action-btn"
                         title="Ver"
                         aria-label="Ver"
                         onClick={() => setDetailId(row.id)}
                       >
                         <IconEye />
+                        <span className="att-gestion-action-btn__label">Ver</span>
                       </button>
                       {canEdit ? (
                         <button
                           type="button"
-                          className="btn btn-link btn-sm py-0 px-1"
+                          className="btn btn-outline-primary btn-sm att-gestion-action-btn"
                           title="Editar"
                           aria-label="Editar"
                           onClick={() => setEditRow(row)}
                         >
                           <IconPencil />
+                          <span className="att-gestion-action-btn__label">Editar</span>
                         </button>
                       ) : null}
                       {canCreate ? (
                         <button
                           type="button"
-                          className="btn btn-link btn-sm py-0 px-1"
+                          className="btn btn-outline-secondary btn-sm att-gestion-action-btn"
                           title="Duplicar"
                           aria-label="Duplicar"
                           onClick={() => setDuplicateRow(row)}
                         >
                           <IconCopy />
+                          <span className="att-gestion-action-btn__label">Duplicar</span>
                         </button>
                       ) : null}
                       {canEdit && String(row.estado).toUpperCase() !== 'RETIRADO' ? (
                         <button
                           type="button"
-                          className="btn btn-link btn-sm py-0 px-1 text-danger"
+                          className="btn btn-outline-danger btn-sm att-gestion-action-btn att-gestion-action-btn--text"
+                          title="Retirar"
+                          aria-label="Retirar"
                           onClick={() => setRetirarRow(row)}
                         >
-                          Retirar
+                          <span className="att-gestion-action-btn__desk">Ret.</span>
+                          <span className="att-gestion-action-btn__label">Retirar</span>
                         </button>
                       ) : null}
                       {canDelete ? (
                         <button
                           type="button"
-                          className="btn btn-link btn-sm py-0 px-1 text-danger"
+                          className="btn btn-outline-danger btn-sm att-gestion-action-btn"
                           title="Eliminar"
                           aria-label="Eliminar"
                           onClick={() => deleteInscripcion(row)}
                         >
                           <IconTrash />
+                          <span className="att-gestion-action-btn__label">Eliminar</span>
                         </button>
                       ) : null}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -2216,13 +2245,13 @@ export function GestionInscripcionesPage({
             </table>
           </div>
         </div>
-        <div className="card-footer d-flex justify-content-between align-items-center small">
-          <span>{meta.total || 0} registros</span>
-          <div className="d-flex gap-2 align-items-center">
+        <div className="card-footer d-flex flex-column flex-sm-row justify-content-between align-items-stretch align-items-sm-center gap-2 small">
+          <span className="text-center text-sm-start">{meta.total || 0} registros</span>
+          <div className="d-flex gap-2 align-items-center justify-content-center justify-content-sm-end">
             <button type="button" className="btn btn-outline-secondary btn-sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
               Anterior
             </button>
-            <span>
+            <span className="text-nowrap">
               Pág. {meta.page || page} / {meta.totalPages || 1}
             </span>
             <button
@@ -2302,7 +2331,7 @@ export function GestionInscripcionesPage({
         subtitle="Ajuste y pulse Aplicar. El mes, estado y búsqueda siguen en la barra principal."
         width={420}
         footer={
-          <>
+          <div className="d-flex flex-wrap gap-2 justify-content-end w-100">
             <button type="button" className="btn btn-outline-secondary btn-sm" onClick={limpiarFiltrosDrawer}>
               Limpiar
             </button>
@@ -2312,7 +2341,7 @@ export function GestionInscripcionesPage({
             <button type="button" className="btn btn-primary btn-sm" onClick={aplicarFiltrosDrawer}>
               Aplicar
             </button>
-          </>
+          </div>
         }
       >
         <DrawerSection title="Periodo y ubicación">
@@ -2449,7 +2478,6 @@ export function GestionCursosPage() {
   return (
     <GestionInscripcionesPage
       tipoFijo={1}
-      title="Inscripciones — Cursos"
       showOtrosLink
     />
   );
@@ -2460,7 +2488,6 @@ export function GestionOtrosTiposPage() {
     <GestionInscripcionesPage
       tipoFijo={null}
       excludeTipo1
-      title="Inscripciones — Otros tipos"
       showOtrosLink={false}
     />
   );

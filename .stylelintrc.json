@@ -14,6 +14,9 @@
     "no-descending-specificity": null,
     "declaration-block-no-redundant-longhand-properties": null,
     "value-keyword-case": null,
-    "comment-empty-line-before": null
+    "comment-empty-line-before": null,
+    "declaration-empty-line-before": null,
+    "declaration-property-value-keyword-no-deprecated": null,
+    "property-no-vendor-prefix": null
   }
 }

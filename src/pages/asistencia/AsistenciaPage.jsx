@@ -21,7 +21,12 @@ import { IconSearch } from '../../components/asistencia/AttendanceIcons.jsx';
 import { whatsappHref } from '../../lib/phoneLinks.js';
 
 function rowKey(inscrito) {
-  return `${String(getIdCurso(inscrito) || '').trim()}-${String(getDocumento(inscrito) || '').trim()}`;
+  const curso = String(getIdCurso(inscrito) || '').trim() || 'sin-curso';
+  const doc = String(getDocumento(inscrito) || '').trim();
+  if (doc) return `${curso}-${doc}`;
+  // Sin documento: evita la key "-" y colisiones entre filas vacías.
+  const nombre = String(getNombreCompleto(inscrito) || '').trim() || 'sin-nombre';
+  return `${curso}-nodoc-${nombre}`;
 }
 
 function cursoLabel(c) {
@@ -179,27 +184,12 @@ export function AsistenciaPage() {
     // para el mismo participante+curso.
     const unique = [];
     const seen = new Set();
-    const duplicates = [];
-    for (const item of byName) {
+    byName.forEach((item) => {
       const k = rowKey(item);
-      if (seen.has(k)) {
-        duplicates.push(k);
-        continue;
-      }
+      if (seen.has(k)) return;
       seen.add(k);
       unique.push(item);
-    }
-
-    if (duplicates.length > 0 && import.meta.env.DEV) {
-      // Log temporal de diagnóstico para detectar origen de duplicados/mezclas.
-      console.warn('[AsistenciaPage] inscritos duplicados detectados', {
-        selectedFilterCourseId: selectedFilterCourseId || 'ALL',
-        search,
-        duplicates: [...new Set(duplicates)],
-        totalBeforeDedup: byName.length,
-        totalAfterDedup: unique.length,
-      });
-    }
+    });
 
     return unique;
   }, [inscritosQuery.data, search, selectedFilterCourseId]);
@@ -259,7 +249,8 @@ export function AsistenciaPage() {
               className={`att-tab-btn ${vista === 'pendientes' ? 'is-active' : ''}`}
               onClick={() => setVista('pendientes')}
             >
-              Sin asistencia hoy
+              <span className="d-none d-sm-inline">Sin asistencia hoy</span>
+              <span className="d-sm-none">Pendientes</span>
             </button>
           ) : null}
         </div>
@@ -381,12 +372,12 @@ export function AsistenciaPage() {
               </div>
             )}
             <div className="att-grid">
-              {filtered.map((inscrito) => {
+              {filtered.map((inscrito, index) => {
                 const k = rowKey(inscrito);
                 const activeEntry = localReport[k] || reportFromApi[k] || null;
                 return (
                   <ParticipantCard
-                    key={k}
+                    key={`${k}::${index}`}
                     inscrito={inscrito}
                     onOpenDetail={setDetail}
                     onReport={(i, r) => fireReport(i, r, '')}
