@@ -122,3 +122,16 @@ export function IconLayoutWindows({ size = 16 }) {
     </svg>
   );
 }
+
+export function IconFilters({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M4 6h16M7 12h10M10 18h4"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}

@@ -10,6 +10,16 @@ export function anioMesBogotaClient() {
   return { anio, mes, mesNum: Number(mes) };
 }
 
+/** Fecha calendario YYYY-MM-DD en America/Bogota (evita desfase UTC en inputs date). */
+export function fechaHoyBogotaClient() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Bogota',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+}
+
 /**
  * Periodos permitidos para nuevas inscripciones:
  * mes actual y siguiente (en diciembre el siguiente es enero del año siguiente).

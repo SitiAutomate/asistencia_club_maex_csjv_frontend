@@ -9,6 +9,7 @@ import { humanizeLabel } from '../../lib/gestionFormat.js';
 import { GestionNav } from '../../components/gestion/GestionNav.jsx';
 import { GestionPanel, GestionPanelModeToggle } from '../../components/gestion/GestionPanel.jsx';
 import { SearchableSelect } from '../../components/gestion/SearchableSelect.jsx';
+import { AttToast, useAttToast } from '../../components/AttToast.jsx';
 
 const LABEL_CAMPO = {
   estado: 'Estado',
@@ -371,6 +372,7 @@ export function GestionPermisosPage() {
   const { user } = useOutletContext() || {};
   const [selectedId, setSelectedId] = useState('');
   const [draft, setDraft] = useState([]);
+  const { toast, showToast, setToast } = useAttToast();
 
   const modsQuery = useQuery({
     queryKey: ['gestion-me-permisos'],
@@ -427,6 +429,10 @@ export function GestionPermisosPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['gestion-permisos-user', selectedId] });
       queryClient.invalidateQueries({ queryKey: ['gestion-me-permisos'] });
+      showToast('success', 'Permisos guardados correctamente');
+    },
+    onError: (err) => {
+      showToast('danger', err?.message || 'No se pudieron guardar los permisos');
     },
   });
 
@@ -556,12 +562,6 @@ export function GestionPermisosPage() {
                 </table>
               </div>
               <div className="card-footer d-flex flex-wrap justify-content-end align-items-center gap-2">
-                {saveMut.isError ? (
-                  <span className="small text-danger me-auto">{saveMut.error?.message}</span>
-                ) : null}
-                {saveMut.isSuccess ? (
-                  <span className="small text-success me-auto">Guardado</span>
-                ) : null}
                 <button
                   type="button"
                   className="btn btn-primary btn-sm"
@@ -575,6 +575,7 @@ export function GestionPermisosPage() {
           )}
         </div>
       </div>
+      <AttToast toast={toast} onClose={() => setToast((t) => ({ ...t, show: false }))} />
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { queryClient } from '../../lib/queryClient.js';
 import { getDefaultAppPath, isAdminLike, isNavKeyEnabled, isSuperAdmin } from '../../lib/navFeatures.js';
 import { canGestion, useGestionPermisos } from '../../lib/useGestionPermisos.js';
 import { formatFechaCorta } from '../../lib/formatDate.js';
-import { anioMesBogotaClient, isPeriodoInscripcionPermitidoClient, periodosInscripcionPermitidosClient } from '../../lib/gestionHelpers.js';
+import { anioMesBogotaClient, isPeriodoInscripcionPermitidoClient, periodosInscripcionPermitidosClient, fechaHoyBogotaClient } from '../../lib/gestionHelpers.js';
 import { loadGestionFilters, saveGestionFilters } from '../../lib/gestionFiltersStorage.js';
 import {
   formatCurrencyCop,
@@ -17,7 +17,8 @@ import { GestionNav } from '../../components/gestion/GestionNav.jsx';
 import { GestionFab } from '../../components/gestion/GestionFab.jsx';
 import { SearchableSelect } from '../../components/gestion/SearchableSelect.jsx';
 import { GestionPanel, GestionPanelModeToggle } from '../../components/gestion/GestionPanel.jsx';
-import { IconCopy, IconEye, IconMonthPass, IconPencil, IconTrash } from '../../components/gestion/GestionIcons.jsx';
+import { DrawerSection, SlideDrawer } from '../../components/gestion/SlideDrawer.jsx';
+import { IconCopy, IconEye, IconFilters, IconMonthPass, IconPencil, IconTrash } from '../../components/gestion/GestionIcons.jsx';
 import { AttToast, useAttToast } from '../../components/AttToast.jsx';
 
 const ESTADOS_EDIT = ['CONFIRMADO', 'ACTIVO', 'INCAPACITADO', 'RETIRADO'];
@@ -1328,6 +1329,8 @@ export function GestionInscripcionesPage({
         actividad: '',
         tipoSel: tipoFijo == null ? '' : String(tipoFijo),
         idCursoFiltro: '',
+        fechaDesde: '',
+        fechaHasta: '',
       }),
     // solo al montar / cambiar de página (tipo1 vs otros)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1339,6 +1342,8 @@ export function GestionInscripcionesPage({
   const [sede, setSede] = useState(initialFilters.sede || '');
   const [q, setQ] = useState(initialFilters.q || '');
   const [actividad, setActividad] = useState(initialFilters.actividad || '');
+  const [fechaDesde, setFechaDesde] = useState(String(initialFilters.fechaDesde || ''));
+  const [fechaHasta, setFechaHasta] = useState(String(initialFilters.fechaHasta || ''));
   const [page, setPage] = useState(1);
   const [tipoSel, setTipoSel] = useState(
     tipoFijo == null ? String(initialFilters.tipoSel || '') : String(tipoFijo),
@@ -1351,6 +1356,16 @@ export function GestionInscripcionesPage({
   const [ficha, setFicha] = useState(null);
   const [exporting, setExporting] = useState(false);
   const [idCursoFiltro, setIdCursoFiltro] = useState(String(initialFilters.idCursoFiltro || ''));
+  const [filtrosOpen, setFiltrosOpen] = useState(false);
+  const [draftFiltros, setDraftFiltros] = useState({
+    anio: String(initialFilters.anio || now.anio),
+    sede: initialFilters.sede || '',
+    actividad: initialFilters.actividad || '',
+    idCursoFiltro: String(initialFilters.idCursoFiltro || ''),
+    tipoSel: tipoFijo == null ? String(initialFilters.tipoSel || '') : String(tipoFijo),
+    fechaDesde: String(initialFilters.fechaDesde || ''),
+    fechaHasta: String(initialFilters.fechaHasta || ''),
+  });
 
   useEffect(() => {
     if (excludeTipo1) setMes('');
@@ -1366,8 +1381,24 @@ export function GestionInscripcionesPage({
       actividad: excludeTipo1 ? '' : actividad,
       tipoSel: excludeTipo1 ? tipoSel : String(tipoFijo ?? 1),
       idCursoFiltro,
+      fechaDesde,
+      fechaHasta,
     });
-  }, [filterKey, anio, mes, estado, sede, q, actividad, tipoSel, idCursoFiltro, excludeTipo1, tipoFijo]);
+  }, [
+    filterKey,
+    anio,
+    mes,
+    estado,
+    sede,
+    q,
+    actividad,
+    tipoSel,
+    idCursoFiltro,
+    fechaDesde,
+    fechaHasta,
+    excludeTipo1,
+    tipoFijo,
+  ]);
 
   const effectiveTipo = tipoFijo != null ? tipoFijo : (tipoSel ? Number(tipoSel) : null);
 
@@ -1538,8 +1569,106 @@ export function GestionInscripcionesPage({
     if (excludeTipo1) u.set('excludeTipo1', 'true');
     if (effectiveTipo != null && Number.isFinite(effectiveTipo)) u.set('tipo', String(effectiveTipo));
     if (idCursoFiltro) u.set('idCurso', idCursoFiltro);
+    if (fechaDesde) u.set('fechaDesde', fechaDesde);
+    if (fechaHasta) u.set('fechaHasta', fechaHasta);
     return u.toString();
-  }, [anio, mes, estado, sede, q, actividad, page, effectiveTipo, excludeTipo1, idCursoFiltro]);
+  }, [
+    anio,
+    mes,
+    estado,
+    sede,
+    q,
+    actividad,
+    page,
+    effectiveTipo,
+    excludeTipo1,
+    idCursoFiltro,
+    fechaDesde,
+    fechaHasta,
+  ]);
+
+  const filtrosAvanzadosActivos = useMemo(() => {
+    let n = 0;
+    if (String(anio) !== String(now.anio)) n += 1;
+    if (sede) n += 1;
+    if (!excludeTipo1 && actividad) n += 1;
+    if (idCursoFiltro) n += 1;
+    if (fechaDesde) n += 1;
+    if (fechaHasta) n += 1;
+    return n;
+  }, [anio, now.anio, sede, actividad, idCursoFiltro, excludeTipo1, fechaDesde, fechaHasta]);
+
+  const openFiltrosDrawer = () => {
+    setDraftFiltros({
+      anio: String(anio || now.anio),
+      sede: sede || '',
+      actividad: actividad || '',
+      idCursoFiltro: idCursoFiltro || '',
+      tipoSel: tipoSel || '',
+      fechaDesde: fechaDesde || '',
+      fechaHasta: fechaHasta || '',
+    });
+    setFiltrosOpen(true);
+  };
+
+  const aplicarFiltrosDrawer = () => {
+    let desde = String(draftFiltros.fechaDesde || '').trim().slice(0, 10);
+    let hasta = String(draftFiltros.fechaHasta || '').trim().slice(0, 10);
+    if (desde && !/^\d{4}-\d{2}-\d{2}$/.test(desde)) desde = '';
+    if (hasta && !/^\d{4}-\d{2}-\d{2}$/.test(hasta)) hasta = '';
+    if (desde && hasta && desde > hasta) {
+      const tmp = desde;
+      desde = hasta;
+      hasta = tmp;
+    }
+    setAnio(String(draftFiltros.anio || now.anio));
+    setSede(draftFiltros.sede || '');
+    if (!excludeTipo1) {
+      setActividad(draftFiltros.actividad || '');
+    }
+    setIdCursoFiltro(draftFiltros.idCursoFiltro || '');
+    setFechaDesde(desde);
+    setFechaHasta(hasta);
+    setPage(1);
+    setFiltrosOpen(false);
+  };
+
+  const limpiarFiltrosDrawer = () => {
+    setDraftFiltros({
+      anio: String(now.anio),
+      sede: '',
+      actividad: '',
+      idCursoFiltro: '',
+      tipoSel: tipoSel || '',
+      fechaDesde: '',
+      fechaHasta: '',
+    });
+  };
+
+  const quitarFiltroRapido = (key) => {
+    if (key === 'sede') setSede('');
+    if (key === 'actividad') {
+      setActividad('');
+      setIdCursoFiltro('');
+    }
+    if (key === 'idCurso') setIdCursoFiltro('');
+    if (key === 'fechas') {
+      setFechaDesde('');
+      setFechaHasta('');
+    }
+    if (key === 'anio') setAnio(String(now.anio));
+    setPage(1);
+  };
+
+  const limpiarFiltrosRapidos = () => {
+    setAnio(String(now.anio));
+    setSede('');
+    setActividad('');
+    setIdCursoFiltro('');
+    setFechaDesde('');
+    setFechaHasta('');
+    setPage(1);
+  };
 
   const listEnabled =
     isAdminLike(user) && (tipoFijo != null || (excludeTipo1 && Boolean(effectiveTipo)));
@@ -1754,13 +1883,14 @@ export function GestionInscripcionesPage({
       <section className="att-admin-filters att-gestion-filters card border-0 shadow-sm mb-3">
         <div className="card-body">
           <div className="row g-2 align-items-end">
-            {tipoFijo == null ? (
+            {excludeTipo1 ? (
               <div className="col-12 col-md-3">
                 <label className="form-label small mb-1">Tipo</label>
                 <SearchableSelect
                   value={tipoSel}
                   onChange={(v) => {
                     setTipoSel(v);
+                    setIdCursoFiltro('');
                     setPage(1);
                   }}
                   options={tiposOptions}
@@ -1769,20 +1899,8 @@ export function GestionInscripcionesPage({
                 />
               </div>
             ) : null}
-            <div className="col-6 col-md-2">
-              <label className="form-label small mb-1">Año</label>
-              <SearchableSelect
-                value={anio}
-                onChange={(v) => {
-                  setAnio(v || String(now.anio));
-                  setPage(1);
-                }}
-                options={anioFilterOptions}
-                allowClear={false}
-              />
-            </div>
             {!excludeTipo1 ? (
-              <div className="col-6 col-md-3">
+              <div className="col-6 col-md-2">
                 <label className="form-label small mb-1">Mes</label>
                 <SearchableSelect
                   value={mes}
@@ -1807,47 +1925,7 @@ export function GestionInscripcionesPage({
                 allowClear={false}
               />
             </div>
-            <div className="col-6 col-md-2">
-              <label className="form-label small mb-1">Sede</label>
-              <SearchableSelect
-                value={sede}
-                onChange={(v) => {
-                  setSede(v);
-                  setPage(1);
-                }}
-                options={SEDES.map((s) => ({ value: s, label: s }))}
-                placeholder="Todas"
-              />
-            </div>
-            {!excludeTipo1 ? (
-              <div className="col-6 col-md-3">
-                <label className="form-label small mb-1">Actividad</label>
-                <SearchableSelect
-                  value={actividad}
-                  onChange={(v) => {
-                    setActividad(v || '');
-                    setPage(1);
-                  }}
-                  options={actividadOptions}
-                  placeholder="Todas…"
-                />
-              </div>
-            ) : null}
-            {!excludeTipo1 ? (
-              <div className="col-6 col-md-3">
-                <label className="form-label small mb-1">Categoría</label>
-                <SearchableSelect
-                  value={idCursoFiltro}
-                  onChange={(v) => {
-                    setIdCursoFiltro(v || '');
-                    setPage(1);
-                  }}
-                  options={categoriaOptions}
-                  placeholder="Todas…"
-                />
-              </div>
-            ) : null}
-            <div className="col-12 col-md-4">
+            <div className={`col-12 ${excludeTipo1 ? 'col-md-4' : 'col-md-5'}`}>
               <label className="form-label small mb-1">Buscar</label>
               <input
                 className="form-control form-control-sm"
@@ -1859,7 +1937,111 @@ export function GestionInscripcionesPage({
                 }}
               />
             </div>
+            <div className="col-12 col-md-3">
+              <label className="form-label small mb-1 d-none d-md-block">&nbsp;</label>
+              <button
+                type="button"
+                className={`att-gestion-filters-btn w-100${filtrosAvanzadosActivos ? ' is-active' : ''}`}
+                onClick={openFiltrosDrawer}
+              >
+                <span className="att-gestion-filters-btn__icon" aria-hidden="true">
+                  <IconFilters size={16} />
+                </span>
+                <span className="att-gestion-filters-btn__copy">
+                  <span className="att-gestion-filters-btn__label">Más filtros</span>
+                  <span className="att-gestion-filters-btn__hint">
+                    {filtrosAvanzadosActivos
+                      ? `${filtrosAvanzadosActivos} activo${filtrosAvanzadosActivos === 1 ? '' : 's'}`
+                      : 'Año, sede, fechas…'}
+                  </span>
+                </span>
+                {filtrosAvanzadosActivos > 0 ? (
+                  <span className="att-gestion-filters-btn__badge">{filtrosAvanzadosActivos}</span>
+                ) : null}
+              </button>
+            </div>
           </div>
+          {filtrosAvanzadosActivos > 0 ? (
+            <div className="att-gestion-filter-chips mt-2">
+              {String(anio) !== String(now.anio) ? (
+                <button
+                  type="button"
+                  className="att-gestion-filter-chip"
+                  onClick={() => quitarFiltroRapido('anio')}
+                  title="Quitar filtro de año"
+                >
+                  Año: {anio}
+                  <span className="att-gestion-filter-chip__x" aria-hidden="true">
+                    ×
+                  </span>
+                </button>
+              ) : null}
+              {sede ? (
+                <button
+                  type="button"
+                  className="att-gestion-filter-chip"
+                  onClick={() => quitarFiltroRapido('sede')}
+                  title="Quitar sede"
+                >
+                  Sede: {sede}
+                  <span className="att-gestion-filter-chip__x" aria-hidden="true">
+                    ×
+                  </span>
+                </button>
+              ) : null}
+              {fechaDesde || fechaHasta ? (
+                <button
+                  type="button"
+                  className="att-gestion-filter-chip"
+                  onClick={() => quitarFiltroRapido('fechas')}
+                  title="Quitar rango de fechas"
+                >
+                  Inscripción: {fechaDesde || '…'} → {fechaHasta || '…'}
+                  <span className="att-gestion-filter-chip__x" aria-hidden="true">
+                    ×
+                  </span>
+                </button>
+              ) : null}
+              {!excludeTipo1 && actividad ? (
+                <button
+                  type="button"
+                  className="att-gestion-filter-chip"
+                  onClick={() => quitarFiltroRapido('actividad')}
+                  title="Quitar actividad"
+                >
+                  Actividad:{' '}
+                  {actividadOptions.find((o) => o.value === String(actividad))?.label || actividad}
+                  <span className="att-gestion-filter-chip__x" aria-hidden="true">
+                    ×
+                  </span>
+                </button>
+              ) : null}
+              {idCursoFiltro ? (
+                <button
+                  type="button"
+                  className="att-gestion-filter-chip"
+                  onClick={() => quitarFiltroRapido('idCurso')}
+                  title="Quitar categoría / curso"
+                >
+                  {excludeTipo1 ? 'Curso' : 'Categoría'}:{' '}
+                  {categoriaOptions.find((o) => o.value === String(idCursoFiltro))?.label ||
+                    cursosSidebarFromMeta.find((c) => String(c.id) === String(idCursoFiltro))?.nombre ||
+                    idCursoFiltro}
+                  <span className="att-gestion-filter-chip__x" aria-hidden="true">
+                    ×
+                  </span>
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="att-gestion-filter-chip att-gestion-filter-chip--clear"
+                onClick={limpiarFiltrosRapidos}
+                title="Quitar todos los filtros avanzados"
+              >
+                Limpiar todo
+              </button>
+            </div>
+          ) : null}
         </div>
       </section>
 
@@ -2112,6 +2294,136 @@ export function GestionInscripcionesPage({
         <FichaModal kind={ficha.kind} documento={ficha.documento} onClose={() => setFicha(null)} />
       ) : null}
 
+      <SlideDrawer
+        open={filtrosOpen}
+        onClose={() => setFiltrosOpen(false)}
+        eyebrow="Inscripciones"
+        title="Filtros"
+        subtitle="Ajuste y pulse Aplicar. El mes, estado y búsqueda siguen en la barra principal."
+        width={420}
+        footer={
+          <>
+            <button type="button" className="btn btn-outline-secondary btn-sm" onClick={limpiarFiltrosDrawer}>
+              Limpiar
+            </button>
+            <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => setFiltrosOpen(false)}>
+              Cancelar
+            </button>
+            <button type="button" className="btn btn-primary btn-sm" onClick={aplicarFiltrosDrawer}>
+              Aplicar
+            </button>
+          </>
+        }
+      >
+        <DrawerSection title="Periodo y ubicación">
+          <div className="mb-2">
+            <label className="form-label small mb-1">Año</label>
+            <SearchableSelect
+              value={draftFiltros.anio}
+              onChange={(v) => setDraftFiltros((p) => ({ ...p, anio: v || String(now.anio) }))}
+              options={anioFilterOptions}
+              allowClear={false}
+            />
+          </div>
+          <div className="mb-2">
+            <label className="form-label small mb-1">Sede</label>
+            <SearchableSelect
+              value={draftFiltros.sede}
+              onChange={(v) => setDraftFiltros((p) => ({ ...p, sede: v || '' }))}
+              options={SEDES.map((s) => ({ value: s, label: s }))}
+              placeholder="Todas"
+            />
+          </div>
+        </DrawerSection>
+
+        {!excludeTipo1 ? (
+          <DrawerSection title="Curso">
+            <div className="mb-2">
+              <label className="form-label small mb-1">Actividad</label>
+              <SearchableSelect
+                value={draftFiltros.actividad}
+                onChange={(v) =>
+                  setDraftFiltros((p) => ({
+                    ...p,
+                    actividad: v || '',
+                    idCursoFiltro: '',
+                  }))
+                }
+                options={actividadOptions}
+                placeholder="Todas…"
+              />
+            </div>
+            <div className="mb-2">
+              <label className="form-label small mb-1">Categoría</label>
+              <SearchableSelect
+                value={draftFiltros.idCursoFiltro}
+                onChange={(v) => setDraftFiltros((p) => ({ ...p, idCursoFiltro: v || '' }))}
+                options={categoriaOptions.filter((o) => {
+                  if (!draftFiltros.actividad) return true;
+                  if (!o.value) return true;
+                  const actMap = new Map(
+                    (metaQuery.data?.cursos || []).map((c) => [
+                      String(c.id),
+                      c.actividadId != null ? String(c.actividadId) : null,
+                    ]),
+                  );
+                  const side = cursosSidebar.find((c) => String(c.id) === String(o.value));
+                  const actId =
+                    side?.actividad != null && String(side.actividad).trim() !== ''
+                      ? String(side.actividad)
+                      : actMap.get(String(o.value));
+                  return String(actId || '') === String(draftFiltros.actividad);
+                })}
+                placeholder="Todas…"
+              />
+            </div>
+          </DrawerSection>
+        ) : null}
+
+        <DrawerSection title="Fecha de inscripción">
+          <div className="row g-2">
+            <div className="col-6">
+              <label className="form-label small mb-1">Desde</label>
+              <input
+                type="date"
+                className="form-control form-control-sm"
+                value={draftFiltros.fechaDesde}
+                max={draftFiltros.fechaHasta || undefined}
+                onChange={(e) =>
+                  setDraftFiltros((p) => ({ ...p, fechaDesde: e.target.value || '' }))
+                }
+              />
+            </div>
+            <div className="col-6">
+              <label className="form-label small mb-1">Hasta</label>
+              <input
+                type="date"
+                className="form-control form-control-sm"
+                value={draftFiltros.fechaHasta}
+                min={draftFiltros.fechaDesde || undefined}
+                onChange={(e) =>
+                  setDraftFiltros((p) => ({ ...p, fechaHasta: e.target.value || '' }))
+                }
+              />
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn btn-link btn-sm px-0 mt-1"
+            onClick={() => {
+              const hoy = fechaHoyBogotaClient();
+              setDraftFiltros((p) => ({
+                ...p,
+                fechaDesde: hoy,
+                fechaHasta: hoy,
+              }));
+            }}
+          >
+            Solo hoy ({fechaHoyBogotaClient()})
+          </button>
+        </DrawerSection>
+      </SlideDrawer>
+
       <GestionFab
         canCreate={canCreate}
         canExport
@@ -2121,7 +2433,7 @@ export function GestionInscripcionesPage({
         onExport={exportExcel}
         onNew={() => {
           if (excludeTipo1 && !effectiveTipo) {
-            showToast('danger', 'Seleccione un tipo de inscripción antes de crear.');
+            showToast('danger', 'Seleccione un tipo antes de crear.');
             return;
           }
           setCreating(true);
