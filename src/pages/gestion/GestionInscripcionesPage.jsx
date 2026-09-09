@@ -1813,10 +1813,22 @@ export function GestionInscripcionesPage({
           { key: 'fechaInscripcion', header: 'Fecha inscripción', format: (v) => formatFechaCorta(v) },
           { key: 'documentoParticipante', header: 'Documento participante' },
           { key: 'nombreParticipante', header: 'Participante' },
+          {
+            key: 'fechaNacimiento',
+            header: 'Fecha nacimiento',
+            format: (v) => formatFechaCorta(v),
+          },
           { key: 'documentoResponsable', header: 'Documento responsable' },
           { key: 'nombreResponsable', header: 'Responsable' },
+          { key: 'celularResponsable', header: 'Celular responsable' },
+          { key: 'correoResponsable', header: 'Correo responsable' },
           { key: 'idCurso', header: 'ID curso' },
-          { key: 'nombreCurso', header: 'Curso / categoría' },
+          {
+            key: 'nombreCurso',
+            header: 'Curso / categoría',
+            format: (v, row) => v || row?.idCurso || '',
+          },
+          { key: 'costoCurso', header: 'Valor curso' },
           { key: 'estado', header: 'Estado' },
           {
             key: 'mes',

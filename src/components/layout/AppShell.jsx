@@ -26,6 +26,7 @@ const ROUTE_TITLES = {
   '/gestion/participantes': 'Participantes',
   '/gestion/responsables': 'Responsables',
   '/gestion/cursos': 'Cursos',
+  '/gestion/entrenadores': 'Entrenadores',
   '/gestion/campos': 'Campos por tipo',
   '/gestion/permisos': 'Permisos',
   '/gestion/auditoria': 'Auditoría',

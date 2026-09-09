@@ -17,6 +17,7 @@ export const NAV_DEF = [
   { key: 'gestion-participantes', path: '/gestion/participantes', label: 'Participantes', envKey: 'VITE_VIEW_GESTION' },
   { key: 'gestion-responsables', path: '/gestion/responsables', label: 'Responsables', envKey: 'VITE_VIEW_GESTION' },
   { key: 'gestion-cursos', path: '/gestion/cursos', label: 'Cursos', envKey: 'VITE_VIEW_GESTION' },
+  { key: 'gestion-entrenadores', path: '/gestion/entrenadores', label: 'Entrenadores', envKey: 'VITE_VIEW_GESTION' },
   { key: 'administrador', path: '/administrador', label: 'Informes', envKey: 'VITE_VIEW_ADMINISTRADOR' },
   { key: 'lvlup', path: '/lvlup', label: 'LVL UP', envKey: 'VITE_VIEW_LVLUP' },
 ];
@@ -27,6 +28,7 @@ const GESTION_KEYS = new Set([
   'gestion-participantes',
   'gestion-responsables',
   'gestion-cursos',
+  'gestion-entrenadores',
 ]);
 
 const ROLE_LABELS = {

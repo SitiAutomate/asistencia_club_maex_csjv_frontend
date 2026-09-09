@@ -17,6 +17,12 @@ const LINKS = [
     match: (p) => p.startsWith('/gestion/responsables'),
   },
   { to: '/gestion/cursos', label: 'Cursos', modulo: 'cursos', match: (p) => p.startsWith('/gestion/cursos') },
+  {
+    to: '/gestion/entrenadores',
+    label: 'Entrenadores',
+    modulo: 'entrenadores',
+    match: (p) => p.startsWith('/gestion/entrenadores'),
+  },
   { to: '/gestion/campos', label: 'Campos', modulo: 'tipo_campos', match: (p) => p.startsWith('/gestion/campos') },
   { to: '/gestion/permisos', label: 'Permisos', modulo: 'permisos', match: (p) => p.startsWith('/gestion/permisos') },
   { to: '/gestion/auditoria', label: 'Auditoría', modulo: 'auditoria', match: (p) => p.startsWith('/gestion/auditoria') },
