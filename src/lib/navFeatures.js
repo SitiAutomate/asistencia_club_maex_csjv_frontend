@@ -13,14 +13,25 @@ export const NAV_DEF = [
   { key: 'informacion', path: '/informacion', label: 'Información', envKey: 'VITE_VIEW_INFORMACION' },
   { key: 'rubricas', path: '/rubricas', label: 'Gestión de rúbricas', envKey: 'VITE_VIEW_RUBRICAS' },
   { key: 'reportes', path: '/reportes', label: 'Reportes', envKey: 'VITE_VIEW_REPORTES' },
-  { key: 'administrador', path: '/administrador', label: 'Administrador', envKey: 'VITE_VIEW_ADMINISTRADOR' },
+  { key: 'gestion', path: '/gestion', label: 'Inscripciones', envKey: 'VITE_VIEW_GESTION' },
+  { key: 'gestion-participantes', path: '/gestion/participantes', label: 'Participantes', envKey: 'VITE_VIEW_GESTION' },
+  { key: 'gestion-responsables', path: '/gestion/responsables', label: 'Responsables', envKey: 'VITE_VIEW_GESTION' },
+  { key: 'gestion-cursos', path: '/gestion/cursos', label: 'Cursos', envKey: 'VITE_VIEW_GESTION' },
+  { key: 'administrador', path: '/administrador', label: 'Informes', envKey: 'VITE_VIEW_ADMINISTRADOR' },
   { key: 'lvlup', path: '/lvlup', label: 'LVL UP', envKey: 'VITE_VIEW_LVLUP' },
 ];
 
 const LVLUP_ONLY_ROLE = 'MaestroLVLUP';
+const GESTION_KEYS = new Set([
+  'gestion',
+  'gestion-participantes',
+  'gestion-responsables',
+  'gestion-cursos',
+]);
 
 const ROLE_LABELS = {
   [LVLUP_ONLY_ROLE]: 'Maestro LVL UP',
+  SuperAdministrador: 'Super administrador',
   Administrador: 'Administrador',
   Desarrollador: 'Desarrollador',
 };
@@ -32,6 +43,31 @@ export function getRoleLabel(rol) {
 
 export function isMaestroLvlupRole(user) {
   return String(user?.rol || '').trim() === LVLUP_ONLY_ROLE;
+}
+
+/** Administrador operativo + SuperAdministrador (informes, gestión, alcance admin). */
+export function isAdminLike(userOrRol) {
+  const rol =
+    typeof userOrRol === 'string' || userOrRol == null
+      ? String(userOrRol || '').trim()
+      : String(userOrRol?.rol || '').trim();
+  return rol === 'Administrador' || rol === 'SuperAdministrador';
+}
+
+export function isSuperAdmin(userOrRol) {
+  const rol =
+    typeof userOrRol === 'string' || userOrRol == null
+      ? String(userOrRol || '').trim()
+      : String(userOrRol?.rol || '').trim();
+  return rol === 'SuperAdministrador';
+}
+
+export function canAccessDocs(userOrRol) {
+  const rol =
+    typeof userOrRol === 'string' || userOrRol == null
+      ? String(userOrRol || '').trim()
+      : String(userOrRol?.rol || '').trim();
+  return rol === 'Desarrollador' || rol === 'SuperAdministrador';
 }
 
 export function getEnabledNavItems() {
@@ -53,19 +89,24 @@ export function getNavItemsForUser(user) {
     return NAV_DEF.filter((item) => item.key === 'lvlup');
   }
 
-  return enabled.filter(
-    (item) =>
-      item.key !== 'historial' &&
-      (item.key !== 'administrador' || rol === 'Administrador'),
-  );
+  return enabled.filter((item) => {
+    if (item.key === 'historial') return false;
+    if (item.key === 'administrador' || GESTION_KEYS.has(item.key)) {
+      return isAdminLike(rol);
+    }
+    return true;
+  });
 }
 
 export function isNavKeyEnabled(key) {
+  if (GESTION_KEYS.has(key) || key === 'gestion') {
+    return getEnabledNavItems().some((i) => GESTION_KEYS.has(i.key) || i.key === 'gestion');
+  }
   return getEnabledNavItems().some((i) => i.key === key);
 }
 
 export function canUserAccessNavKey(user, key) {
-  return getNavItemsForUser(user).some((i) => i.key === key);
+  return getNavItemsForUser(user).some((i) => i.key === key || (key === 'gestion' && GESTION_KEYS.has(i.key)));
 }
 
 /** Primera ruta del menú habilitada (fallback /asistencia si ninguna coincide). */

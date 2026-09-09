@@ -23,3 +23,18 @@ export function formatFechaCorta(value, locale = 'es-CO') {
   if (!d) return String(value).slice(0, 10);
   return d.toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
+
+/** Fecha + hora (para auditoría / timestamps). */
+export function formatFechaHora(value, locale = 'es-CO') {
+  if (!value) return '—';
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value);
+  return d.toLocaleString(locale, {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+}

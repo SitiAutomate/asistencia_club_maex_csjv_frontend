@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useOutletContext } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiFetch, fetchAuthenticatedImageObjectUrl, getJson, openAuthenticatedUpload } from '../../lib/api.js';
-import { getDefaultAppPath, isNavKeyEnabled } from '../../lib/navFeatures.js';
+import { getDefaultAppPath, isAdminLike, isNavKeyEnabled } from '../../lib/navFeatures.js';
 import { getDocumento, getNombreCompleto } from '../../lib/inscritoHelpers.js';
 import { normalizeForSearch } from '../../lib/normalizeSearch.js';
 import { queryClient } from '../../lib/queryClient.js';
@@ -239,7 +239,7 @@ function EvalDetailModal({ open, evaluacion, onClose }) {
 export function ReportesPage() {
   const { user } = useOutletContext() || {};
   const email = user?.email || '';
-  const isAdmin = String(user?.rol || '').trim() === 'Administrador';
+  const isAdmin = isAdminLike(user);
   const [selectedCursoId, setSelectedCursoId] = useState('');
   const [participantSearch, setParticipantSearch] = useState('');
   const [selectedDoc, setSelectedDoc] = useState('');

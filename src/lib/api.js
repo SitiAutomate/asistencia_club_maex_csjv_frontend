@@ -89,7 +89,7 @@ export async function apiFetch(path, options = {}) {
 
   let res;
   try {
-    res = await fetch(apiUrl(path), { ...options, headers });
+    res = await fetch(apiUrl(path), { ...options, headers, cache: 'no-store' });
   } catch (networkError) {
     const raw = String(networkError?.message || '');
     const isLoadFailed =
@@ -133,6 +133,18 @@ export async function apiFetch(path, options = {}) {
 
 export function postJson(path, body) {
   return apiFetch(path, { method: 'POST', body: JSON.stringify(body) });
+}
+
+export function putJson(path, body) {
+  return apiFetch(path, { method: 'PUT', body: JSON.stringify(body) });
+}
+
+export function patchJson(path, body) {
+  return apiFetch(path, { method: 'PATCH', body: JSON.stringify(body) });
+}
+
+export function deleteJson(path) {
+  return apiFetch(path, { method: 'DELETE' });
 }
 
 export function getJson(path) {

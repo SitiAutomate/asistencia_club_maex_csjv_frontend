@@ -159,11 +159,14 @@
 .att-main {
   padding: 1rem;
   max-width: 1400px;
+  width: 100%;
+  min-width: 0;
   margin: 0 auto;
+  box-sizing: border-box;
 }
 
 .att-main--wide {
-  max-width: 1720px;
+  max-width: min(1720px, 100%);
 }
 
 .att-main.att-reportes-page {

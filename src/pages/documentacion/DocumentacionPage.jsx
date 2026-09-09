@@ -9,6 +9,7 @@ import {
   DOCUMENTATION_CATALOG,
   groupCatalogItems,
 } from '../../lib/documentationCatalog.js';
+import { canAccessDocs, isSuperAdmin } from '../../lib/navFeatures.js';
 import '../../styles/documentacion.css';
 
 const INTRO_MD = `
@@ -30,9 +31,8 @@ Bienvenido al portal visual de documentación. Aquí encontrará guías del **ba
 4. POST /api/asistencia
 `;
 
-function canAccessDocs(rol) {
-  const r = String(rol || '').trim();
-  return r === 'Desarrollador' || r === 'Administrador';
+function canAccessDocsPage(rol) {
+  return canAccessDocs(rol);
 }
 
 export function DocumentacionPage() {
@@ -43,14 +43,14 @@ export function DocumentacionPage() {
   const catalogQuery = useQuery({
     queryKey: ['docs', 'catalog'],
     queryFn: () => getJson('/api/docs/catalog'),
-    enabled: canAccessDocs(user?.rol),
+    enabled: canAccessDocsPage(user?.rol),
     retry: 1,
   });
 
   const contentQuery = useQuery({
     queryKey: ['docs', 'content', selectedId],
     queryFn: () => getJson(`/api/docs/content/${selectedId}`),
-    enabled: canAccessDocs(user?.rol) && selectedId !== 'intro',
+    enabled: canAccessDocsPage(user?.rol) && selectedId !== 'intro',
     retry: 1,
   });
 
@@ -150,7 +150,7 @@ export function DocumentacionPage() {
       <div className="doc-main">
         <div className="doc-toolbar no-print">
           <h2 className="doc-toolbar__title">{pageTitle}</h2>
-          {String(user?.rol || '').trim() === 'Desarrollador' ? (
+          {String(user?.rol || '').trim() === 'Desarrollador' || isSuperAdmin(user) ? (
             <button type="button" className="btn btn-outline-primary btn-sm" onClick={openSwagger}>
               Abrir Swagger
             </button>

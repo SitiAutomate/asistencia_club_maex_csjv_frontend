@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useOutletContext } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getJson, openAuthenticatedUpload } from '../../lib/api.js';
-import { getDefaultAppPath, isNavKeyEnabled } from '../../lib/navFeatures.js';
+import { getDefaultAppPath, isAdminLike, isNavKeyEnabled } from '../../lib/navFeatures.js';
 import { normalizeForSearch } from '../../lib/normalizeSearch.js';
 import {
   periodoActualDesdeConfig,
@@ -151,7 +151,7 @@ function StatIcon({ type }) {
 export function AdministradorPage() {
   const { user } = useOutletContext() || {};
   const navEnabled = isNavKeyEnabled('administrador');
-  const isAdmin = String(user?.rol || '').trim() === 'Administrador';
+  const isAdmin = isAdminLike(user);
   const periodoConfigQuery = usePeriodoInformesConfig(navEnabled && isAdmin);
   const periodoConfig = periodoConfigQuery.data;
   const periodoSugerido = periodoConfigQuery.isSuccess

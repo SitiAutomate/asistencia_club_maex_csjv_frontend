@@ -10,6 +10,7 @@ import { ResetDonePage } from './pages/ResetDonePage.jsx';
 import { VerifyEmailPage } from './pages/VerifyEmailPage.jsx';
 import { RequireAuth } from './components/layout/RequireAuth.jsx';
 import { RequireNavView } from './components/layout/RequireNavView.jsx';
+import { RequireGestionModulo } from './components/layout/RequireGestionModulo.jsx';
 import { AppShell } from './components/layout/AppShell.jsx';
 import { HomeRedirect } from './pages/HomeRedirect.jsx';
 import { AsistenciaPage } from './pages/asistencia/AsistenciaPage.jsx';
@@ -20,6 +21,20 @@ import { ReportesPage } from './pages/asistencia/ReportesPage.jsx';
 import { AdministradorPage } from './pages/asistencia/AdministradorPage.jsx';
 import { LvlupPage } from './pages/lvlup/LvlupPage.jsx';
 import { DocumentacionPage } from './pages/documentacion/DocumentacionPage.jsx';
+import {
+  GestionCursosPage,
+  GestionOtrosTiposPage,
+} from './pages/gestion/GestionInscripcionesPage.jsx';
+import {
+  GestionParticipantesPage,
+  GestionResponsablesPage,
+  GestionCursosCatalogPage,
+} from './pages/gestion/GestionCatalogPages.jsx';
+import {
+  GestionAuditoriaPage,
+  GestionPermisosPage,
+  GestionTipoCamposPage,
+} from './pages/gestion/GestionConfigPages.jsx';
 
 export default function App() {
   return (
@@ -43,6 +58,86 @@ export default function App() {
             <Route path="informacion" element={<RequireNavView navKey="informacion"><InformacionPage /></RequireNavView>} />
             <Route path="rubricas" element={<RequireNavView navKey="rubricas"><GestionRubricasPage /></RequireNavView>} />
             <Route path="reportes" element={<RequireNavView navKey="reportes"><ReportesPage /></RequireNavView>} />
+            <Route
+              path="gestion"
+              element={
+                <RequireNavView navKey="gestion">
+                  <RequireGestionModulo modulo="inscripciones">
+                    <GestionCursosPage />
+                  </RequireGestionModulo>
+                </RequireNavView>
+              }
+            />
+            <Route
+              path="gestion/otros"
+              element={
+                <RequireNavView navKey="gestion">
+                  <RequireGestionModulo modulo="otros">
+                    <GestionOtrosTiposPage />
+                  </RequireGestionModulo>
+                </RequireNavView>
+              }
+            />
+            <Route
+              path="gestion/participantes"
+              element={
+                <RequireNavView navKey="gestion">
+                  <RequireGestionModulo modulo="participantes">
+                    <GestionParticipantesPage />
+                  </RequireGestionModulo>
+                </RequireNavView>
+              }
+            />
+            <Route
+              path="gestion/responsables"
+              element={
+                <RequireNavView navKey="gestion">
+                  <RequireGestionModulo modulo="responsables">
+                    <GestionResponsablesPage />
+                  </RequireGestionModulo>
+                </RequireNavView>
+              }
+            />
+            <Route
+              path="gestion/cursos"
+              element={
+                <RequireNavView navKey="gestion">
+                  <RequireGestionModulo modulo="cursos">
+                    <GestionCursosCatalogPage />
+                  </RequireGestionModulo>
+                </RequireNavView>
+              }
+            />
+            <Route
+              path="gestion/campos"
+              element={
+                <RequireNavView navKey="gestion">
+                  <RequireGestionModulo modulo="tipo_campos">
+                    <GestionTipoCamposPage />
+                  </RequireGestionModulo>
+                </RequireNavView>
+              }
+            />
+            <Route
+              path="gestion/permisos"
+              element={
+                <RequireNavView navKey="gestion">
+                  <RequireGestionModulo modulo="permisos">
+                    <GestionPermisosPage />
+                  </RequireGestionModulo>
+                </RequireNavView>
+              }
+            />
+            <Route
+              path="gestion/auditoria"
+              element={
+                <RequireNavView navKey="gestion">
+                  <RequireGestionModulo modulo="auditoria">
+                    <GestionAuditoriaPage />
+                  </RequireGestionModulo>
+                </RequireNavView>
+              }
+            />
             <Route path="administrador" element={<RequireNavView navKey="administrador"><AdministradorPage /></RequireNavView>} />
             <Route path="lvlup" element={<RequireNavView navKey="lvlup"><LvlupPage /></RequireNavView>} />
             <Route path="documentacion" element={<DocumentacionPage />} />

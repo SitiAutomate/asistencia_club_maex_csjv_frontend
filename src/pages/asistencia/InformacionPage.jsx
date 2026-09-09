@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useOutletContext } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getJson } from '../../lib/api.js';
-import { getDefaultAppPath, isNavKeyEnabled } from '../../lib/navFeatures.js';
+import { getDefaultAppPath, isAdminLike, isNavKeyEnabled } from '../../lib/navFeatures.js';
 import { getCursoNombre, getDocumento, getNombreCompleto, getParticipante } from '../../lib/inscritoHelpers.js';
 import { formatFechaCorta } from '../../lib/formatDate.js';
 import { normalizeForSearch } from '../../lib/normalizeSearch.js';
@@ -140,7 +140,7 @@ function CursoSearchSelect({ cursos, value, onChange, allowAll = false }) {
 export function InformacionPage() {
   const { user } = useOutletContext() || {};
   const email = user?.email || '';
-  const isAdmin = String(user?.rol || '').trim() === 'Administrador';
+  const isAdmin = isAdminLike(user);
   const navEnabled = isNavKeyEnabled('informacion');
 
   const [selectedCursoId, setSelectedCursoId] = useState('');

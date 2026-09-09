@@ -3,7 +3,7 @@ import { Navigate, useOutletContext } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { getJson, postJson, apiFetch } from '../../lib/api.js';
 import { queryClient } from '../../lib/queryClient.js';
-import { getDefaultAppPath, isNavKeyEnabled } from '../../lib/navFeatures.js';
+import { getDefaultAppPath, isAdminLike, isNavKeyEnabled } from '../../lib/navFeatures.js';
 import { normalizeForSearch } from '../../lib/normalizeSearch.js';
 
 const TIPOS = ['Técnico', 'Físico', 'Táctico', 'Actitudinal', 'Psicológico', 'Cultural'];
@@ -455,7 +455,7 @@ export function GestionRubricasPage() {
   const { user } = useOutletContext() || {};
   const email = user?.email || '';
   const rol = user?.rol || '';
-  const isAdmin = rol === 'Administrador';
+  const isAdmin = isAdminLike(rol);
   const navEnabled = isNavKeyEnabled('rubricas');
 
   const [search, setSearch] = useState('');

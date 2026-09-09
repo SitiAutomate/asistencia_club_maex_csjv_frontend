@@ -3,7 +3,7 @@ import { Navigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { getJson, postJson } from '../../lib/api.js';
 import { queryClient } from '../../lib/queryClient.js';
-import { getDefaultAppPath, isNavKeyEnabled } from '../../lib/navFeatures.js';
+import { getDefaultAppPath, isAdminLike, isNavKeyEnabled } from '../../lib/navFeatures.js';
 import { buildFaltasMesMap, getMesActualRange } from '../../lib/asistenciaFaltas.js';
 import { matchesParticipantSearch, normalizeForSearch } from '../../lib/normalizeSearch.js';
 import {
@@ -14,6 +14,7 @@ import {
 } from '../../lib/inscritoHelpers.js';
 import { ParticipantCard } from '../../components/asistencia/ParticipantCard.jsx';
 import { AsistenciaHistorialTab } from '../../components/asistencia/AsistenciaHistorialTab.jsx';
+import { AsistenciaPendientesTab } from '../../components/asistencia/AsistenciaPendientesTab.jsx';
 import { ExcusaModal } from '../../components/asistencia/ExcusaModal.jsx';
 import { ParticipantDetailModal } from '../../components/asistencia/ParticipantDetailModal.jsx';
 import { IconSearch } from '../../components/asistencia/AttendanceIcons.jsx';
@@ -45,14 +46,23 @@ function isToday(value) {
 export function AsistenciaPage() {
   const { user } = useOutletContext() || {};
   const email = user?.email || '';
-  const isAdmin = String(user?.rol || '').trim() === 'Administrador';
+  const isAdmin = isAdminLike(user);
   const [searchParams, setSearchParams] = useSearchParams();
-  const vista = searchParams.get('tab') === 'historial' ? 'historial' : 'registrar';
+  const vista =
+    searchParams.get('tab') === 'historial'
+      ? 'historial'
+      : searchParams.get('tab') === 'pendientes' && isAdmin
+        ? 'pendientes'
+        : 'registrar';
   const mesActual = useMemo(() => getMesActualRange(), []);
 
   const setVista = (next) => {
     if (next === 'historial') {
       setSearchParams({ tab: 'historial' });
+      return;
+    }
+    if (next === 'pendientes') {
+      setSearchParams({ tab: 'pendientes' });
       return;
     }
     setSearchParams({});
@@ -144,6 +154,7 @@ export function AsistenciaPage() {
         setLocalReport((prev) => ({ ...prev, [k]: { reporte, comentarios } }));
         queryClient.invalidateQueries({ queryKey: ['asistencia-hoy'] });
         queryClient.invalidateQueries({ queryKey: ['asistencia-faltas-mes'] });
+        queryClient.invalidateQueries({ queryKey: ['asistencia-cursos-sin-hoy'] });
         queryClient.invalidateQueries({ queryKey: ['historial'] });
         onAfter?.();
       },
@@ -242,6 +253,15 @@ export function AsistenciaPage() {
           >
             Historial
           </button>
+          {isAdmin ? (
+            <button
+              type="button"
+              className={`att-tab-btn ${vista === 'pendientes' ? 'is-active' : ''}`}
+              onClick={() => setVista('pendientes')}
+            >
+              Sin asistencia hoy
+            </button>
+          ) : null}
         </div>
         {vista === 'registrar' ? (
           <>
@@ -332,6 +352,8 @@ export function AsistenciaPage() {
       <div className="att-main">
         {vista === 'historial' ? (
           <AsistenciaHistorialTab enabled={Boolean(email)} />
+        ) : vista === 'pendientes' ? (
+          <AsistenciaPendientesTab />
         ) : (
           <>
         {inscritosQuery.isError && (

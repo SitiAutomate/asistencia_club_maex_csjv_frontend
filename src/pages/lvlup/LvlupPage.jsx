@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useOutletContext } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getJson, postJson } from '../../lib/api.js';
-import { getDefaultAppPathForUser, isMaestroLvlupRole, isNavKeyEnabled } from '../../lib/navFeatures.js';
+import { getDefaultAppPathForUser, isAdminLike, isMaestroLvlupRole, isNavKeyEnabled } from '../../lib/navFeatures.js';
+import { canGestion, useGestionPermisos } from '../../lib/useGestionPermisos.js';
 import {
   etiquetaPaquete,
   horasPermitidasOpciones,
@@ -12,6 +13,7 @@ import {
 } from '../../lib/lvlupHoras.js';
 import { LvlupComentarioModal } from '../../components/lvlup/LvlupComentarioModal.jsx';
 import { LvlupHistorialTab } from '../../components/lvlup/LvlupHistorialTab.jsx';
+import { LvlupAdminTab } from '../../components/lvlup/LvlupAdminTab.jsx';
 
 function resumenAsignacion(a) {
   const asig = a.nombre_asignatura || `Asignatura ${a.id_asignatura}`;
@@ -24,11 +26,20 @@ export function LvlupPage() {
   const { user } = useOutletContext() || {};
   const queryClient = useQueryClient();
   const navEnabled = isNavKeyEnabled('lvlup');
-  const isAdmin = String(user?.rol || '') === 'Administrador';
+  const isAdmin = isAdminLike(user);
   const isMaestroLvlup = isMaestroLvlupRole(user);
   const canAccess = navEnabled || isAdmin || isMaestroLvlup;
+  const permisosQuery = useGestionPermisos(user);
+  const canAdminLvlup =
+    isAdmin &&
+    (canGestion(permisosQuery.data, 'lvlup', 'crear') ||
+      canGestion(permisosQuery.data, 'lvlup', 'editar'));
 
   const [vista, setVista] = useState('registrar');
+
+  useEffect(() => {
+    if (vista === 'admin' && !canAdminLvlup) setVista('registrar');
+  }, [vista, canAdminLvlup]);
   const [maestroId, setMaestroId] = useState('');
   const [asignacionId, setAsignacionId] = useState('');
   const [tipoRegistro, setTipoRegistro] = useState(null);
@@ -195,7 +206,7 @@ export function LvlupPage() {
     (participantes.length > 0 && participantes.every((p) => marcas[p.documento] !== undefined));
 
   return (
-    <div className="att-main att-lvlup-page">
+    <div className={`att-main att-lvlup-page${vista === 'admin' ? ' att-lvlup-page--admin' : ''}`}>
       <header className="att-lvlup-page__head">
         <div className="d-flex flex-wrap align-items-center gap-2">
           <h2 className="h5 fw-bold att-lvlup-page__title mb-0">LVL UP</h2>
@@ -214,14 +225,25 @@ export function LvlupPage() {
             >
               Historial
             </button>
+            {canAdminLvlup ? (
+              <button
+                type="button"
+                className={`att-tab-btn ${vista === 'admin' ? 'is-active' : ''}`}
+                onClick={() => setVista('admin')}
+              >
+                Administración
+              </button>
+            ) : null}
           </div>
         </div>
         {vista === 'registrar' ? (
-          <span className="att-lvlup-periodo" title="Paquetes activos por asignación de AppSheet">
+          <span className="att-lvlup-periodo" title="Paquetes activos por asignación">
             Asignaciones activas
           </span>
         ) : null}
       </header>
+
+      {vista === 'admin' && canAdminLvlup ? <LvlupAdminTab /> : null}
 
       {vista === 'historial' ? (
         <LvlupHistorialTab
@@ -229,7 +251,7 @@ export function LvlupPage() {
           maestros={maestrosQuery.data?.maestros || []}
           asignaciones={asignaciones}
         />
-      ) : (
+      ) : vista === 'registrar' ? (
         <>
       {isAdmin ? (
         <section className="att-admin-filters card border-0 shadow-sm att-lvlup-filters">
@@ -594,7 +616,7 @@ export function LvlupPage() {
         </section>
       </div>
         </>
-      )}
+      ) : null}
 
       <LvlupComentarioModal
         open={Boolean(comentarioModal)}

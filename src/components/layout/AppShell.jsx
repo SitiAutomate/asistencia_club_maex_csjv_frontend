@@ -3,7 +3,12 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getJson, setStoredToken } from '../../lib/api.js';
 import { queryClient } from '../../lib/queryClient.js';
-import { getNavItemsForUser, getRoleLabel } from '../../lib/navFeatures.js';
+import { getNavItemsForUser, getRoleLabel, canAccessDocs, isAdminLike } from '../../lib/navFeatures.js';
+import {
+  canGestion,
+  NAV_KEY_GESTION_MODULO,
+  useGestionPermisos,
+} from '../../lib/useGestionPermisos.js';
 import { IconClose, IconMenu } from '../asistencia/AttendanceIcons.jsx';
 import '../../styles/asistencia/index.css';
 
@@ -16,7 +21,15 @@ const ROUTE_TITLES = {
   '/informacion': 'Información',
   '/rubricas': 'Gestión de rúbricas',
   '/reportes': 'Reportes',
-  '/administrador': 'Administrador',
+  '/gestion': 'Inscripciones — Cursos',
+  '/gestion/otros': 'Inscripciones — Otros tipos',
+  '/gestion/participantes': 'Participantes',
+  '/gestion/responsables': 'Responsables',
+  '/gestion/cursos': 'Cursos',
+  '/gestion/campos': 'Campos por tipo',
+  '/gestion/permisos': 'Permisos',
+  '/gestion/auditoria': 'Auditoría',
+  '/administrador': 'Informes',
   '/lvlup': 'LVL UP',
   '/documentacion': 'Documentación',
 };
@@ -34,11 +47,16 @@ export function AppShell() {
   });
 
   const user = meQuery.data?.user;
-  const canSeeDocs =
-    String(user?.rol || '').trim() === 'Desarrollador' ||
-    String(user?.rol || '').trim() === 'Administrador';
+  const canSeeDocs = canAccessDocs(user);
+  const permisosQuery = useGestionPermisos(user);
 
-  const navItems = getNavItemsForUser(user);
+  const navItems = getNavItemsForUser(user).filter((item) => {
+    if (!isAdminLike(user)) return true;
+    const modulo = NAV_KEY_GESTION_MODULO[item.key];
+    if (!modulo) return true;
+    if (!permisosQuery.isSuccess) return false;
+    return canGestion(permisosQuery.data, modulo, 'leer');
+  });
 
   const displayName = String(user?.nombre || '').trim();
   const email = String(user?.email || '').trim();
@@ -111,6 +129,7 @@ export function AppShell() {
             <NavLink
               key={item.path}
               to={item.path}
+              end={item.path === '/gestion'}
               className={({ isActive }) => `att-sidebar__link ${isActive ? 'is-active' : ''}`}
               onClick={() => setSidebarOpen(false)}
             >
