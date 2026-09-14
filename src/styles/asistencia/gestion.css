@@ -1955,3 +1955,63 @@ td.att-gestion-cell-clip {
     display: none;
   }
 }
+
+.att-sort-th {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.att-sort-th:hover,
+.att-sort-th:focus-visible {
+  opacity: 0.85;
+}
+
+.att-sort-th__ind {
+  font-size: 0.68rem;
+  opacity: 0.55;
+  flex: 0 0 auto;
+}
+
+.att-sort-th.is-active .att-sort-th__ind {
+  opacity: 1;
+}
+
+@media (max-width: 767px) {
+  .att-admin-table-wrap--mobile-safe .att-admin-table thead.att-sortable-head {
+    display: block;
+    overflow-x: auto;
+    margin-bottom: 0.5rem;
+    border-radius: 0.5rem;
+    background: #0f2747;
+  }
+
+  .att-admin-table-wrap--mobile-safe .att-admin-table thead.att-sortable-head tr {
+    display: flex;
+    width: max-content;
+    min-width: 100%;
+    gap: 0.15rem;
+    padding: 0.35rem;
+    margin: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .att-admin-table-wrap--mobile-safe .att-admin-table thead.att-sortable-head th {
+    display: block;
+    width: auto;
+    padding: 0.2rem 0.35rem;
+    white-space: nowrap;
+  }
+}

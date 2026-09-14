@@ -9,6 +9,7 @@ import { IconPencil } from '../../components/gestion/GestionIcons.jsx';
 import { SearchableSelect } from '../../components/gestion/SearchableSelect.jsx';
 import { GestionNav } from '../../components/gestion/GestionNav.jsx';
 import { GestionFab } from '../../components/gestion/GestionFab.jsx';
+import { SortableTh, toggleColumnSort } from '../../components/gestion/SortableTh.jsx';
 import { DrawerField, DrawerSection } from '../../components/gestion/SlideDrawer.jsx';
 import { GestionPanel, GestionPanelModeToggle } from '../../components/gestion/GestionPanel.jsx';
 import { AttToast, useAttToast } from '../../components/AttToast.jsx';
@@ -208,15 +209,18 @@ export function GestionEntrenadoresPage() {
   const canEdit = canGestion(permisosQuery.data, 'entrenadores', 'editar');
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
+  const [sort, setSort] = useState({ sort: 'nombre', dir: 'asc' });
   const [selectedId, setSelectedId] = useState(null);
   const [editing, setEditing] = useState(null);
   const [creating, setCreating] = useState(false);
   const { toast, showToast, setToast } = useAttToast();
 
   const query = useQuery({
-    queryKey: ['gestion-entrenadores', q, page],
+    queryKey: ['gestion-entrenadores', q, page, sort.sort, sort.dir],
     queryFn: () =>
-      getJson(`/api/gestion/entrenadores?page=${page}&limit=40&q=${encodeURIComponent(q)}`),
+      getJson(
+        `/api/gestion/entrenadores?page=${page}&limit=40&q=${encodeURIComponent(q)}&sort=${encodeURIComponent(sort.sort)}&dir=${encodeURIComponent(sort.dir)}`,
+      ),
     enabled: isAdminLike(user),
   });
 
@@ -345,13 +349,58 @@ export function GestionEntrenadoresPage() {
       <div className="card border-0 shadow-sm">
         <div className="table-responsive att-admin-table-wrap--mobile-safe">
           <table className="table table-sm table-hover mb-0 att-admin-table att-gestion-table">
-            <thead>
+            <thead className="att-sortable-head">
               <tr>
-                <th>ID</th>
-                <th>Nombre</th>
-                <th>Correo</th>
-                <th>Disciplinas</th>
-                <th>Cursos</th>
+                <SortableTh
+                  label="ID"
+                  column="id"
+                  sort={sort.sort}
+                  dir={sort.dir}
+                  onSort={(column) => {
+                    setSort((current) => toggleColumnSort(current, column));
+                    setPage(1);
+                  }}
+                />
+                <SortableTh
+                  label="Nombre"
+                  column="nombre"
+                  sort={sort.sort}
+                  dir={sort.dir}
+                  onSort={(column) => {
+                    setSort((current) => toggleColumnSort(current, column));
+                    setPage(1);
+                  }}
+                />
+                <SortableTh
+                  label="Correo"
+                  column="correo"
+                  sort={sort.sort}
+                  dir={sort.dir}
+                  onSort={(column) => {
+                    setSort((current) => toggleColumnSort(current, column));
+                    setPage(1);
+                  }}
+                />
+                <SortableTh
+                  label="Disciplinas"
+                  column="disciplinas"
+                  sort={sort.sort}
+                  dir={sort.dir}
+                  onSort={(column) => {
+                    setSort((current) => toggleColumnSort(current, column));
+                    setPage(1);
+                  }}
+                />
+                <SortableTh
+                  label="Cursos"
+                  column="cursos"
+                  sort={sort.sort}
+                  dir={sort.dir}
+                  onSort={(column) => {
+                    setSort((current) => toggleColumnSort(current, column));
+                    setPage(1);
+                  }}
+                />
                 <th></th>
               </tr>
             </thead>

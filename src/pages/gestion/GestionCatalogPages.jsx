@@ -9,6 +9,7 @@ import { formatFechaCorta } from '../../lib/formatDate.js';
 import { formatCurrencyCop, MESES_LABEL } from '../../lib/gestionFormat.js';
 import { IconPencil } from '../../components/gestion/GestionIcons.jsx';
 import { SearchableSelect } from '../../components/gestion/SearchableSelect.jsx';
+import { SortableTh, sortRows, toggleColumnSort } from '../../components/gestion/SortableTh.jsx';
 import { GestionNav } from '../../components/gestion/GestionNav.jsx';
 import { GestionFab } from '../../components/gestion/GestionFab.jsx';
 import { DrawerField, DrawerSection } from '../../components/gestion/SlideDrawer.jsx';
@@ -46,6 +47,52 @@ function digitsOnly(value) {
 function isDayOn(value) {
   const s = String(value ?? '').trim().toUpperCase();
   return s === 'X' || s === 'SI' || s === '1' || s === 'TRUE';
+}
+
+function foldText(value) {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+}
+
+function matchSelectValue(options, raw) {
+  const s = String(raw ?? '').trim();
+  if (!s) return '';
+  const exact = options.find((o) => String(o.value) === s);
+  if (exact) return exact.value;
+  const folded = foldText(s);
+  const fuzzy = options.find((o) => foldText(o.value) === folded || foldText(o.label) === folded);
+  return fuzzy ? fuzzy.value : s;
+}
+
+function toDateInput(value) {
+  if (!value) return '';
+  const s = String(value).trim();
+  const m = /^(\d{4}-\d{2}-\d{2})/.exec(s);
+  return m ? m[1] : '';
+}
+
+function toParticipanteForm(row) {
+  if (!row) return {};
+  const tipoDocumento = matchSelectValue(TIPOS_DOC_PARTICIPANTE, row.tipoDocumento);
+  return {
+    ...row,
+    tipoDocumento,
+    internoExterno: matchSelectValue(INTERNO_EXTERNO_OPTS, row.internoExterno),
+    fechaNacimiento: toDateInput(row.fechaNacimiento),
+    primerNombre: row.primerNombre || '',
+    segundoNombre: row.segundoNombre || '',
+    primerApellido: row.primerApellido || '',
+    segundoApellido: row.segundoApellido || '',
+  };
+}
+
+function withCurrentOption(options, value) {
+  const s = String(value ?? '').trim();
+  if (!s || options.some((o) => String(o.value) === s)) return options;
+  return [{ value: s, label: s }, ...options];
 }
 
 function renderFormField(f, form, setForm) {
@@ -426,16 +473,24 @@ export function GestionParticipantesPage() {
   const canEdit = canGestion(permisosQuery.data, 'participantes', 'editar');
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
+  const [sort, setSort] = useState({ sort: 'nombre', dir: 'asc' });
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [editing, setEditing] = useState(null);
   const [creating, setCreating] = useState(false);
   const [respQ, setRespQ] = useState('');
   const { toast, showToast, setToast } = useAttToast();
 
+  const onSort = (column) => {
+    setSort((current) => toggleColumnSort(current, column));
+    setPage(1);
+  };
+
   const query = useQuery({
-    queryKey: ['gestion-participantes', q, page],
+    queryKey: ['gestion-participantes', q, page, sort.sort, sort.dir],
     queryFn: () =>
-      getJson(`/api/gestion/participantes?page=${page}&limit=40&q=${encodeURIComponent(q)}`),
+      getJson(
+        `/api/gestion/participantes?page=${page}&limit=40&q=${encodeURIComponent(q)}&sort=${encodeURIComponent(sort.sort)}&dir=${encodeURIComponent(sort.dir)}`,
+      ),
     enabled: isAdminLike(user),
   });
 
@@ -443,6 +498,12 @@ export function GestionParticipantesPage() {
     queryKey: ['gestion-ficha', 'participante', selectedDoc],
     queryFn: () => getJson(`/api/gestion/participantes/${encodeURIComponent(selectedDoc)}`),
     enabled: Boolean(selectedDoc),
+  });
+
+  const editLoadQuery = useQuery({
+    queryKey: ['gestion-ficha', 'participante', editing?.documento, 'edit'],
+    queryFn: () => getJson(`/api/gestion/participantes/${encodeURIComponent(editing.documento)}`),
+    enabled: Boolean(editing?.documento) && !creating,
   });
 
   const respQuery = useQuery({
@@ -512,7 +573,10 @@ export function GestionParticipantesPage() {
           key: 'tipoDocumento',
           label: 'Tipo de documento',
           type: 'select',
-          options: TIPOS_DOC_PARTICIPANTE,
+          options: withCurrentOption(
+            TIPOS_DOC_PARTICIPANTE,
+            editLoadQuery.data?.participante?.tipoDocumento || editing?.tipoDocumento,
+          ),
           allowClear: false,
           col: 'col-md-4',
         },
@@ -577,12 +641,12 @@ export function GestionParticipantesPage() {
       <div className="card border-0 shadow-sm">
         <div className="table-responsive att-admin-table-wrap--mobile-safe">
           <table className="table table-sm table-hover mb-0 att-admin-table att-gestion-table">
-            <thead>
+            <thead className="att-sortable-head">
               <tr>
-                <th>Documento</th>
-                <th>Nombre completo</th>
-                <th>Grupo</th>
-                <th>Responsable</th>
+                <SortableTh label="Documento" column="documento" sort={sort.sort} dir={sort.dir} onSort={onSort} />
+                <SortableTh label="Nombre completo" column="nombre" sort={sort.sort} dir={sort.dir} onSort={onSort} />
+                <SortableTh label="Grupo" column="grupo" sort={sort.sort} dir={sort.dir} onSort={onSort} />
+                <SortableTh label="Responsable" column="responsable" sort={sort.sort} dir={sort.dir} onSort={onSort} />
                 <th></th>
               </tr>
             </thead>
@@ -618,7 +682,7 @@ export function GestionParticipantesPage() {
                         title="Editar"
                         onClick={() => {
                           setSelectedDoc(null);
-                          setEditing(r);
+                          setEditing(toParticipanteForm(r));
                         }}
                       >
                         <IconPencil />
@@ -657,7 +721,7 @@ export function GestionParticipantesPage() {
                 type="button"
                 className="btn btn-primary btn-sm"
                 onClick={() => {
-                  setEditing(detail || selectedRow);
+                  setEditing(toParticipanteForm(detail || selectedRow));
                   setSelectedDoc(null);
                 }}
               >
@@ -699,12 +763,12 @@ export function GestionParticipantesPage() {
       </GestionPanel>
 
       <EntityFormModal
-        key={editing?.documento || (creating ? 'new-part' : 'closed')}
-        open={creating || Boolean(editing)}
+        key={creating ? 'new-part' : `edit-${editing?.documento}-${editLoadQuery.dataUpdatedAt || 0}`}
+        open={creating || (Boolean(editing) && !editLoadQuery.isPending)}
         title={editing ? 'Editar participante' : 'Nuevo participante'}
         hint="El nombre completo se arma con primer/segundo nombre y apellidos."
         sections={sections}
-        initial={editing || {}}
+        initial={creating ? {} : toParticipanteForm(editLoadQuery.data?.participante || editing)}
         onClose={() => {
           setCreating(false);
           setEditing(null);
@@ -945,15 +1009,23 @@ export function GestionResponsablesPage() {
   const canEdit = canGestion(permisosQuery.data, 'responsables', 'editar');
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
+  const [sort, setSort] = useState({ sort: 'nombre', dir: 'asc' });
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [editing, setEditing] = useState(null);
   const [creating, setCreating] = useState(false);
   const { toast, showToast, setToast } = useAttToast();
 
+  const onSort = (column) => {
+    setSort((current) => toggleColumnSort(current, column));
+    setPage(1);
+  };
+
   const query = useQuery({
-    queryKey: ['gestion-responsables', q, page],
+    queryKey: ['gestion-responsables', q, page, sort.sort, sort.dir],
     queryFn: () =>
-      getJson(`/api/gestion/responsables?page=${page}&limit=40&q=${encodeURIComponent(q)}`),
+      getJson(
+        `/api/gestion/responsables?page=${page}&limit=40&q=${encodeURIComponent(q)}&sort=${encodeURIComponent(sort.sort)}&dir=${encodeURIComponent(sort.dir)}`,
+      ),
     enabled: isAdminLike(user),
   });
 
@@ -1027,12 +1099,12 @@ export function GestionResponsablesPage() {
       <div className="card border-0 shadow-sm">
         <div className="table-responsive att-admin-table-wrap--mobile-safe">
           <table className="table table-sm table-hover mb-0 att-admin-table att-gestion-table">
-            <thead>
+            <thead className="att-sortable-head">
               <tr>
-                <th>Documento</th>
-                <th>Nombre completo</th>
-                <th>Celular</th>
-                <th>Correo</th>
+                <SortableTh label="Documento" column="documento" sort={sort.sort} dir={sort.dir} onSort={onSort} />
+                <SortableTh label="Nombre completo" column="nombre" sort={sort.sort} dir={sort.dir} onSort={onSort} />
+                <SortableTh label="Celular" column="celular" sort={sort.sort} dir={sort.dir} onSort={onSort} />
+                <SortableTh label="Correo" column="correo" sort={sort.sort} dir={sort.dir} onSort={onSort} />
                 <th></th>
               </tr>
             </thead>
@@ -1184,6 +1256,7 @@ export function GestionCursosCatalogPage() {
   const [editing, setEditing] = useState(null);
   const [creating, setCreating] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [sort, setSort] = useState({ sort: 'nombre', dir: 'asc' });
   const { toast, showToast, setToast } = useAttToast();
 
   const tiposQuery = useQuery({
@@ -1266,7 +1339,15 @@ export function GestionCursosCatalogPage() {
     value: String(a.id),
     label: a.nombre || String(a.id),
   }));
-  const rows = query.data?.cursos || [];
+  const rows = sortRows(query.data?.cursos || [], sort.sort, sort.dir, (row, column) => {
+    if (column === 'id') return row.id;
+    if (column === 'nombre') return row.nombreCorto || row.nombre || '';
+    if (column === 'sede') return row.sede || '';
+    if (column === 'tarifa') return Number(String(row.tarifa ?? '').replace(/\D/g, '')) || 0;
+    if (column === 'cupos') return Number(row.cuposLlenos || 0);
+    if (column === 'estado') return row.estado || '';
+    return '';
+  });
   const periodoCupos = query.data?.meta?.periodoCupos || [];
   const selected = rows.find((c) => String(c.id) === String(selectedId)) || null;
 
@@ -1377,14 +1458,50 @@ export function GestionCursosCatalogPage() {
       <div className="card border-0 shadow-sm">
         <div className="table-responsive att-admin-table-wrap--mobile-safe">
           <table className="table table-sm table-hover mb-0 att-admin-table att-gestion-table att-cursos-table">
-            <thead>
+            <thead className="att-sortable-head">
               <tr>
-                <th>ID</th>
-                <th>Nombre</th>
-                <th>Sede</th>
-                <th>Tarifa</th>
-                <th>Cupos</th>
-                <th>Estado</th>
+                <SortableTh
+                  label="ID"
+                  column="id"
+                  sort={sort.sort}
+                  dir={sort.dir}
+                  onSort={(column) => setSort((current) => toggleColumnSort(current, column))}
+                />
+                <SortableTh
+                  label="Nombre"
+                  column="nombre"
+                  sort={sort.sort}
+                  dir={sort.dir}
+                  onSort={(column) => setSort((current) => toggleColumnSort(current, column))}
+                />
+                <SortableTh
+                  label="Sede"
+                  column="sede"
+                  sort={sort.sort}
+                  dir={sort.dir}
+                  onSort={(column) => setSort((current) => toggleColumnSort(current, column))}
+                />
+                <SortableTh
+                  label="Tarifa"
+                  column="tarifa"
+                  sort={sort.sort}
+                  dir={sort.dir}
+                  onSort={(column) => setSort((current) => toggleColumnSort(current, column))}
+                />
+                <SortableTh
+                  label="Cupos"
+                  column="cupos"
+                  sort={sort.sort}
+                  dir={sort.dir}
+                  onSort={(column) => setSort((current) => toggleColumnSort(current, column))}
+                />
+                <SortableTh
+                  label="Estado"
+                  column="estado"
+                  sort={sort.sort}
+                  dir={sort.dir}
+                  onSort={(column) => setSort((current) => toggleColumnSort(current, column))}
+                />
                 <th></th>
               </tr>
             </thead>

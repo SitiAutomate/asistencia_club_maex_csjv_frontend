@@ -15,6 +15,7 @@ import {
 } from '../../lib/gestionFormat.js';
 import { GestionNav } from '../../components/gestion/GestionNav.jsx';
 import { GestionFab } from '../../components/gestion/GestionFab.jsx';
+import { SortableTh, toggleColumnSort } from '../../components/gestion/SortableTh.jsx';
 import { SearchableSelect } from '../../components/gestion/SearchableSelect.jsx';
 import { GestionPanel, GestionPanelModeToggle } from '../../components/gestion/GestionPanel.jsx';
 import { DrawerSection, SlideDrawer } from '../../components/gestion/SlideDrawer.jsx';
@@ -1344,6 +1345,7 @@ export function GestionInscripcionesPage({
   const [fechaDesde, setFechaDesde] = useState(String(initialFilters.fechaDesde || ''));
   const [fechaHasta, setFechaHasta] = useState(String(initialFilters.fechaHasta || ''));
   const [page, setPage] = useState(1);
+  const [sort, setSort] = useState({ sort: 'fecha', dir: 'desc' });
   const [tipoSel, setTipoSel] = useState(
     tipoFijo == null ? String(initialFilters.tipoSel || '') : String(tipoFijo),
   );
@@ -1587,6 +1589,10 @@ export function GestionInscripcionesPage({
     if (idCursoFiltro) u.set('idCurso', idCursoFiltro);
     if (fechaDesde) u.set('fechaDesde', fechaDesde);
     if (fechaHasta) u.set('fechaHasta', fechaHasta);
+    if (sort.sort) {
+      u.set('sort', sort.sort);
+      u.set('dir', sort.dir);
+    }
     return u.toString();
   }, [
     anio,
@@ -1601,6 +1607,8 @@ export function GestionInscripcionesPage({
     idCursoFiltro,
     fechaDesde,
     fechaHasta,
+    sort.sort,
+    sort.dir,
   ]);
 
   const filtrosAvanzadosActivos = useMemo(() => {
@@ -2125,16 +2133,88 @@ export function GestionInscripcionesPage({
         <div className="card-body p-0">
           <div className="table-responsive att-gestion-table-wrap att-admin-table-wrap--mobile-safe">
             <table className="table table-sm table-hover mb-0 att-admin-table att-gestion-table">
-              <thead>
+              <thead className="att-sortable-head">
                 <tr>
-                  <th>Fecha</th>
-                  <th>Participante</th>
-                  <th>Curso</th>
-                  <th>Estado</th>
-                  <th>Mes</th>
-                  <th>Año</th>
-                  <th>Sede</th>
-                  <th>Transporte</th>
+                  <SortableTh
+                    label="Fecha"
+                    column="fecha"
+                    sort={sort.sort}
+                    dir={sort.dir}
+                    onSort={(column) => {
+                      setSort((current) => toggleColumnSort(current, column));
+                      setPage(1);
+                    }}
+                  />
+                  <SortableTh
+                    label="Participante"
+                    column="participante"
+                    sort={sort.sort}
+                    dir={sort.dir}
+                    onSort={(column) => {
+                      setSort((current) => toggleColumnSort(current, column));
+                      setPage(1);
+                    }}
+                  />
+                  <SortableTh
+                    label="Curso"
+                    column="curso"
+                    sort={sort.sort}
+                    dir={sort.dir}
+                    onSort={(column) => {
+                      setSort((current) => toggleColumnSort(current, column));
+                      setPage(1);
+                    }}
+                  />
+                  <SortableTh
+                    label="Estado"
+                    column="estado"
+                    sort={sort.sort}
+                    dir={sort.dir}
+                    onSort={(column) => {
+                      setSort((current) => toggleColumnSort(current, column));
+                      setPage(1);
+                    }}
+                  />
+                  <SortableTh
+                    label="Mes"
+                    column="mes"
+                    sort={sort.sort}
+                    dir={sort.dir}
+                    onSort={(column) => {
+                      setSort((current) => toggleColumnSort(current, column));
+                      setPage(1);
+                    }}
+                  />
+                  <SortableTh
+                    label="Año"
+                    column="anio"
+                    sort={sort.sort}
+                    dir={sort.dir}
+                    onSort={(column) => {
+                      setSort((current) => toggleColumnSort(current, column));
+                      setPage(1);
+                    }}
+                  />
+                  <SortableTh
+                    label="Sede"
+                    column="sede"
+                    sort={sort.sort}
+                    dir={sort.dir}
+                    onSort={(column) => {
+                      setSort((current) => toggleColumnSort(current, column));
+                      setPage(1);
+                    }}
+                  />
+                  <SortableTh
+                    label="Transporte"
+                    column="transporte"
+                    sort={sort.sort}
+                    dir={sort.dir}
+                    onSort={(column) => {
+                      setSort((current) => toggleColumnSort(current, column));
+                      setPage(1);
+                    }}
+                  />
                   {camposLista.map((c) => (
                     <th key={c.campoKey} className="att-gestion-extra-col">
                       {c.label}
