@@ -197,6 +197,8 @@ function emptyCursoForm(tipo) {
     actividad: '',
     linea: '',
     docente: '',
+    fechaInicio: '',
+    fechaFinal: '',
     lunes: '',
     martes: '',
     miercoles: '',
@@ -232,6 +234,8 @@ function CursoFormModal({
         tarifa: digitsOnly(editing.tarifa),
         estado: editing.estado || 'ACTIVO',
         sede: editing.sede || 'MEDELLÍN',
+        fechaInicio: toDateInput(editing.fechaInicio),
+        fechaFinal: toDateInput(editing.fechaFinal),
         lunes: isDayOn(editing.lunes) ? 'X' : '',
         martes: isDayOn(editing.martes) ? 'X' : '',
         miercoles: isDayOn(editing.miercoles) ? 'X' : '',
@@ -403,6 +407,24 @@ function CursoFormModal({
                   className="form-control form-control-sm"
                   value={form.codigoFacturacion}
                   onChange={(e) => setForm((p) => ({ ...p, codigoFacturacion: e.target.value }))}
+                />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label small">Fecha de inicio</label>
+                <input
+                  type="date"
+                  className="form-control form-control-sm"
+                  value={form.fechaInicio || ''}
+                  onChange={(e) => setForm((p) => ({ ...p, fechaInicio: e.target.value }))}
+                />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label small">Fecha final</label>
+                <input
+                  type="date"
+                  className="form-control form-control-sm"
+                  value={form.fechaFinal || ''}
+                  onChange={(e) => setForm((p) => ({ ...p, fechaFinal: e.target.value }))}
                 />
               </div>
             </div>
@@ -1301,6 +1323,8 @@ export function GestionCursosCatalogPage() {
         docente: form.docente || null,
         estado: form.estado || 'ACTIVO',
         sede: form.sede || null,
+        fechaInicio: form.fechaInicio || null,
+        fechaFinal: form.fechaFinal || null,
         lunes: form.lunes || null,
         martes: form.martes || null,
         miercoles: form.miercoles || null,
