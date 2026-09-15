@@ -187,15 +187,28 @@ function useEntityOptions(kind, enabled, selectedValue, selectedLabel) {
 
 function useCausalesOptions(enabled) {
   const query = useQuery({
-    queryKey: ['gestion-causales'],
+    queryKey: ['gestion-causales', 'v2'],
     queryFn: () => getJson('/api/gestion/causales'),
     enabled,
     staleTime: 5 * 60_000,
   });
-  return useMemo(
-    () => (query.data?.causales || []).map((c) => ({ value: c, label: c })),
-    [query.data],
-  );
+  return useMemo(() => {
+    const seen = new Set();
+    const out = [];
+    for (const c of query.data?.causales || []) {
+      const label = String(c || '').trim();
+      if (!label) continue;
+      const key = label
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/\s+/g, ' ');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ value: label, label });
+    }
+    return out;
+  }, [query.data]);
 }
 
 function InscripcionFormModal({
@@ -1357,6 +1370,7 @@ export function GestionInscripcionesPage({
   const [ficha, setFicha] = useState(null);
   const [exporting, setExporting] = useState(false);
   const [idCursoFiltro, setIdCursoFiltro] = useState(String(initialFilters.idCursoFiltro || ''));
+  const [cursoSidebarQ, setCursoSidebarQ] = useState('');
   const [filtrosOpen, setFiltrosOpen] = useState(false);
   const [draftFiltros, setDraftFiltros] = useState({
     anio: String(initialFilters.anio || now.anio),
@@ -1732,6 +1746,22 @@ export function GestionInscripcionesPage({
     [cursosSidebarFromMeta],
   );
 
+  const cursosSidebarFiltered = useMemo(() => {
+    const q = String(cursoSidebarQ || '')
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+    if (!q) return cursosSidebarFromMeta;
+    return cursosSidebarFromMeta.filter((c) => {
+      const hay = `${c.id || ''} ${c.nombre || ''}`
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+      return hay.includes(q);
+    });
+  }, [cursosSidebarFromMeta, cursoSidebarQ]);
+
   const invalidateList = async (message) => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['gestion-inscripciones'] }),
@@ -2090,6 +2120,16 @@ export function GestionInscripcionesPage({
         {excludeTipo1 && effectiveTipo ? (
           <aside className="att-gestion-course-panel card border-0 shadow-sm">
             <div className="att-gestion-course-panel__head">Cursos del tipo</div>
+            <div className="att-gestion-course-panel__search">
+              <input
+                type="search"
+                className="form-control form-control-sm"
+                placeholder="Buscar curso…"
+                value={cursoSidebarQ}
+                onChange={(e) => setCursoSidebarQ(e.target.value)}
+                aria-label="Buscar curso en filtros rápidos"
+              />
+            </div>
             <div className="att-gestion-course-panel__scroll">
               <button
                 type="button"
@@ -2107,7 +2147,7 @@ export function GestionInscripcionesPage({
                   <div className="spinner-border spinner-border-sm text-primary" />
                 </div>
               ) : null}
-              {cursosSidebarFromMeta.map((c) => (
+              {cursosSidebarFiltered.map((c) => (
                 <button
                   key={c.id}
                   type="button"
@@ -2122,8 +2162,15 @@ export function GestionInscripcionesPage({
                   <span className="att-gestion-course-panel__count">{Number(c.total || 0)}</span>
                 </button>
               ))}
-              {!cursosSidebarQuery.isPending && !metaQuery.isPending && cursosSidebarFromMeta.length === 0 ? (
+              {!cursosSidebarQuery.isPending &&
+              !metaQuery.isPending &&
+              cursosSidebarFromMeta.length === 0 ? (
                 <div className="small text-muted px-3 py-2">Sin cursos para este tipo</div>
+              ) : null}
+              {!cursosSidebarQuery.isPending &&
+              cursosSidebarFromMeta.length > 0 &&
+              cursosSidebarFiltered.length === 0 ? (
+                <div className="small text-muted px-3 py-2">Sin coincidencias</div>
               ) : null}
             </div>
           </aside>

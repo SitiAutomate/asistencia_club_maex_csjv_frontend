@@ -902,6 +902,16 @@ td.att-gestion-cell-clip {
   border-bottom: 1px solid #e8eef4;
 }
 
+.att-gestion-course-panel__search {
+  flex: 0 0 auto;
+  padding: 0.55rem 0.75rem 0.45rem;
+  border-bottom: 1px solid #e8eef4;
+}
+
+.att-gestion-course-panel__search .form-control {
+  font-size: 0.8rem;
+}
+
 .att-gestion-course-panel__scroll {
   flex: 1 1 auto;
   min-height: 0;

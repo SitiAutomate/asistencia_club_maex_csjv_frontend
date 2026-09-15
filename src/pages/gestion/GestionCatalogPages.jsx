@@ -1315,16 +1315,19 @@ export function GestionCursosCatalogPage() {
   const saveMut = useMutation({
     mutationFn: (form) => {
       const payload = {
-        ...form,
+        id: form.id,
+        nombre: form.nombre,
+        nombreCorto: form.nombreCorto,
         tipo: Number(form.tipo || tipo),
         tarifa: digitsOnly(form.tarifa) || null,
+        codigoFacturacion: form.codigoFacturacion || null,
         actividad: form.actividad || null,
         linea: form.linea || null,
         docente: form.docente || null,
         estado: form.estado || 'ACTIVO',
         sede: form.sede || null,
-        fechaInicio: form.fechaInicio || null,
-        fechaFinal: form.fechaFinal || null,
+        fechaInicio: toDateInput(form.fechaInicio) || null,
+        fechaFinal: toDateInput(form.fechaFinal) || null,
         lunes: form.lunes || null,
         martes: form.martes || null,
         miercoles: form.miercoles || null,
@@ -1333,7 +1336,7 @@ export function GestionCursosCatalogPage() {
         sabado: form.sabado || null,
       };
       if (editing?.id) return patchJson(`/api/gestion/cursos/${encodeURIComponent(editing.id)}`, payload);
-      return postJson('/api/gestion/cursos', { ...payload, id: form.id });
+      return postJson('/api/gestion/cursos', payload);
     },
     onSuccess: async (_data, form) => {
       const wasEdit = Boolean(editing?.id);
