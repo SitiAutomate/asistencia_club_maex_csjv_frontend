@@ -5,7 +5,7 @@ import { getJson, patchJson, postJson } from '../../lib/api.js';
 import { queryClient } from '../../lib/queryClient.js';
 import { getDefaultAppPath, isAdminLike, isNavKeyEnabled } from '../../lib/navFeatures.js';
 import { canGestion, useGestionPermisos } from '../../lib/useGestionPermisos.js';
-import { formatFechaCorta } from '../../lib/formatDate.js';
+import { formatFechaCorta, toDateInput } from '../../lib/formatDate.js';
 import { formatCurrencyCop, MESES_LABEL } from '../../lib/gestionFormat.js';
 import { IconPencil } from '../../components/gestion/GestionIcons.jsx';
 import { SearchableSelect } from '../../components/gestion/SearchableSelect.jsx';
@@ -65,13 +65,6 @@ function matchSelectValue(options, raw) {
   const folded = foldText(s);
   const fuzzy = options.find((o) => foldText(o.value) === folded || foldText(o.label) === folded);
   return fuzzy ? fuzzy.value : s;
-}
-
-function toDateInput(value) {
-  if (!value) return '';
-  const s = String(value).trim();
-  const m = /^(\d{4}-\d{2}-\d{2})/.exec(s);
-  return m ? m[1] : '';
 }
 
 function toParticipanteForm(row) {

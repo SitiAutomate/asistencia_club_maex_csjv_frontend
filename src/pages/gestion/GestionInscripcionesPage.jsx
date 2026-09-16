@@ -5,7 +5,7 @@ import { getJson, patchJson, postJson, deleteJson } from '../../lib/api.js';
 import { queryClient } from '../../lib/queryClient.js';
 import { getDefaultAppPath, isAdminLike, isNavKeyEnabled, isSuperAdmin } from '../../lib/navFeatures.js';
 import { canGestion, useGestionPermisos } from '../../lib/useGestionPermisos.js';
-import { formatFechaCorta } from '../../lib/formatDate.js';
+import { formatFechaCorta, toDateInput } from '../../lib/formatDate.js';
 import { anioMesBogotaClient, isPeriodoInscripcionPermitidoClient, periodosInscripcionPermitidosClient, fechaHoyBogotaClient } from '../../lib/gestionHelpers.js';
 import { loadGestionFilters, saveGestionFilters } from '../../lib/gestionFiltersStorage.js';
 import {
@@ -249,9 +249,11 @@ function InscripcionFormModal({
         observaciones: initial.observaciones || '',
         observacionFacturacion: initial.observacionFacturacion || '',
         causalRetiro: initial.causalRetiro || '',
-        fechaIngresoNuevoTransporte: String(initial.fechaIngresoNuevoTransporte || '').slice(0, 10),
-        fechaRetiro: String(initial.fechaRetiro || '').slice(0, 10),
-        fechaRetiroTransporte: String(initial.fechaRetiroTransporte || '').slice(0, 10),
+        fechaIngresoNuevoTransporte: toDateInput(initial.fechaIngresoNuevoTransporte),
+        fechaRetiro:
+          toDateInput(initial.fechaRetiro) ||
+          (String(initial.estado || '').toUpperCase() === 'RETIRADO' ? fechaHoyBogotaClient() : ''),
+        fechaRetiroTransporte: toDateInput(initial.fechaRetiroTransporte),
         camposExtra: extras,
       });
     } else {
@@ -436,9 +438,9 @@ function InscripcionFormModal({
         observaciones,
         observacionFacturacion,
         causalRetiro: estado === 'RETIRADO' ? form.causalRetiro : null,
-        fechaIngresoNuevoTransporte: form.fechaIngresoNuevoTransporte || null,
-        fechaRetiro: estado === 'RETIRADO' ? form.fechaRetiro || null : null,
-        fechaRetiroTransporte: form.fechaRetiroTransporte || null,
+        fechaIngresoNuevoTransporte: toDateInput(form.fechaIngresoNuevoTransporte) || null,
+        fechaRetiro: estado === 'RETIRADO' ? toDateInput(form.fechaRetiro) || null : null,
+        fechaRetiroTransporte: toDateInput(form.fechaRetiroTransporte) || null,
         ...(tipo > 1 ? { camposExtra: extras } : {}),
       };
       if (initial?.id) return patchJson(`/api/gestion/inscripciones/${initial.id}`, payload);
@@ -604,7 +606,9 @@ function InscripcionFormModal({
                       estado: v,
                       ...(String(v).toUpperCase() !== 'RETIRADO'
                         ? { causalRetiro: '', fechaRetiro: '' }
-                        : {}),
+                        : {
+                            fechaRetiro: p.fechaRetiro || fechaHoyBogotaClient(),
+                          }),
                     }))
                   }
                   options={estadoFormOptions}
@@ -821,9 +825,9 @@ function DuplicarInscripcionModal({ source, anioOptions, onClose, onSaved }) {
         observaciones: source.observaciones || '',
         observacionFacturacion: source.observacionFacturacion || '',
         causalRetiro: isRetirado ? causalRetiro : null,
-        fechaIngresoNuevoTransporte: source.fechaIngresoNuevoTransporte || null,
-        fechaRetiro: isRetirado ? fechaRetiro : null,
-        fechaRetiroTransporte: source.fechaRetiroTransporte || null,
+        fechaIngresoNuevoTransporte: toDateInput(source.fechaIngresoNuevoTransporte) || null,
+        fechaRetiro: isRetirado ? toDateInput(fechaRetiro) || null : null,
+        fechaRetiroTransporte: toDateInput(source.fechaRetiroTransporte) || null,
       });
     },
     onSuccess: () => {
@@ -934,18 +938,19 @@ function DuplicarInscripcionModal({ source, anioOptions, onClose, onSaved }) {
 
 function RetirarModal({ row, onClose, onSaved }) {
   const [causal, setCausal] = useState('');
-  const [fechaRetiro, setFechaRetiro] = useState(() => new Date().toISOString().slice(0, 10));
+  const [fechaRetiro, setFechaRetiro] = useState(() => fechaHoyBogotaClient());
   const [error, setError] = useState('');
   const causalesOptions = useCausalesOptions(Boolean(row));
 
   const mut = useMutation({
     mutationFn: () => {
       if (!causal) throw new Error('Seleccione la causal de retiro');
-      if (!fechaRetiro) throw new Error('La fecha de retiro es obligatoria');
+      const fecha = toDateInput(fechaRetiro);
+      if (!fecha) throw new Error('La fecha de retiro es obligatoria');
       return patchJson(`/api/gestion/inscripciones/${row.id}`, {
         estado: 'RETIRADO',
         causalRetiro: causal,
-        fechaRetiro: fechaRetiro,
+        fechaRetiro: fecha,
       });
     },
     onSuccess: () => {
@@ -1857,6 +1862,7 @@ export function GestionInscripcionesPage({
             format: (v) => formatFechaCorta(v),
           },
           { key: 'documentoResponsable', header: 'Documento responsable' },
+          { key: 'tipoDocumentoResponsable', header: 'Tipo doc. responsable' },
           { key: 'nombreResponsable', header: 'Responsable' },
           { key: 'celularResponsable', header: 'Celular responsable' },
           { key: 'correoResponsable', header: 'Correo responsable' },
@@ -1865,6 +1871,16 @@ export function GestionInscripcionesPage({
             key: 'nombreCurso',
             header: 'Curso / categoría',
             format: (v, row) => v || row?.idCurso || '',
+          },
+          {
+            key: 'nombreLinea',
+            header: 'Línea',
+            format: (v, row) => v || row?.lineaId || '',
+          },
+          {
+            key: 'nombreActividad',
+            header: 'Actividad',
+            format: (v, row) => v || row?.actividadId || '',
           },
           { key: 'costoCurso', header: 'Valor curso' },
           { key: 'estado', header: 'Estado' },
@@ -1884,6 +1900,16 @@ export function GestionInscripcionesPage({
           { key: 'observaciones', header: 'Observaciones' },
           { key: 'observacionFacturacion', header: 'Obs. facturación' },
           { key: 'causalRetiro', header: 'Causal retiro' },
+          {
+            key: 'fechaRetiro',
+            header: 'Fecha retiro',
+            format: (v) => formatFechaCorta(v),
+          },
+          {
+            key: 'fechaRetiroTransporte',
+            header: 'Fecha retiro transporte',
+            format: (v) => formatFechaCorta(v),
+          },
         ],
       });
     } catch (err) {
