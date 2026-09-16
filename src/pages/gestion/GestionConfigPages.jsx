@@ -583,6 +583,7 @@ export function GestionPermisosPage() {
 export function GestionTipoCamposPage() {
   const { user } = useOutletContext() || {};
   const [tipo, setTipo] = useState('2');
+  const [idCurso, setIdCurso] = useState('');
   const [editing, setEditing] = useState(null);
 
   const tiposQuery = useQuery({
@@ -605,9 +606,20 @@ export function GestionTipoCamposPage() {
     staleTime: 5 * 60_000,
   });
 
+  const cursosQuery = useQuery({
+    queryKey: ['gestion-cursos-tipo-campos', tipo],
+    queryFn: () => getJson(`/api/gestion/cursos?soloActivos=false&tipo=${encodeURIComponent(tipo)}`),
+    enabled: isAdminLike(user) && Boolean(tipo),
+    staleTime: 60_000,
+  });
+
   const camposQuery = useQuery({
-    queryKey: ['gestion-tipo-campos', tipo],
-    queryFn: () => getJson(`/api/gestion/config/tipo-campos?tipo=${tipo}&soloActivos=false`),
+    queryKey: ['gestion-tipo-campos', tipo, idCurso || '*'],
+    queryFn: () => {
+      const u = new URLSearchParams({ tipo, soloActivos: 'false' });
+      if (idCurso) u.set('idCurso', idCurso);
+      return getJson(`/api/gestion/config/tipo-campos?${u.toString()}`);
+    },
     enabled: isAdminLike(user) && Boolean(tipo),
   });
 
@@ -616,6 +628,7 @@ export function GestionTipoCamposPage() {
       postJson('/api/gestion/config/tipo-campos', {
         ...form,
         tipo: Number(tipo),
+        idCurso: form.idCurso != null ? String(form.idCurso) : '',
         catalogo: form.catalogo || null,
         tipoInput: form.catalogo ? 'relation' : form.tipoInput,
       }),
@@ -638,6 +651,15 @@ export function GestionTipoCamposPage() {
     .filter((t) => Number(t.id) !== 1)
     .map((t) => ({ value: String(t.id), label: `${t.nombre} (${t.id})` }));
 
+  const cursoOptions = [
+    { value: '', label: 'Todos los cursos (por defecto)' },
+    ...(cursosQuery.data?.cursos || []).map((c) => ({
+      value: String(c.id),
+      label: `${c.nombre || c.id} (${c.id})`,
+      searchText: `${c.id} ${c.nombre || ''}`,
+    })),
+  ];
+
   const colOptions = (colsQuery.data?.columnas || []).map((c) => ({
     value: c.field,
     label: c.field,
@@ -650,6 +672,7 @@ export function GestionTipoCamposPage() {
     label: '',
     tipoInput: 'text',
     catalogo: '',
+    idCurso: idCurso || '',
     visibleLista: false,
     visibleDetalle: true,
     visibleForm: true,
@@ -680,6 +703,7 @@ export function GestionTipoCamposPage() {
                 label: '',
                 tipoInput: 'text',
                 catalogo: '',
+                idCurso: idCurso || '',
                 visibleLista: false,
                 visibleDetalle: true,
                 visibleForm: true,
@@ -698,20 +722,36 @@ export function GestionTipoCamposPage() {
         </div>
       </div>
       <p className="small text-muted">
-        Defina qué columnas de <code>inscripciones_1</code> se muestran en otros tipos. Si el valor es un ID
-        de otra tabla (ej. asignatura), elija el <strong>catálogo relacionado</strong> para mostrar el
-        nombre y poder seleccionarlo en el formulario.
+        Defina qué columnas de <code>inscripciones_1</code> se muestran en otros tipos. Si no elige un
+        curso, el campo aplica a <strong>todos</strong>. Si elige un curso concreto, ese campo tiene
+        prioridad solo para ese curso (el resto sigue usando la configuración global).
       </p>
-      <div className="mb-3" style={{ maxWidth: '100%', width: 'min(360px, 100%)' }}>
-        <SearchableSelect
-          value={tipo}
-          onChange={(v) => {
-            setTipo(v);
-            setEditing(null);
-          }}
-          options={tiposOptions}
-          allowClear={false}
-        />
+      <div className="row g-2 mb-3">
+        <div className="col-12 col-md-5" style={{ maxWidth: '100%', width: 'min(360px, 100%)' }}>
+          <label className="form-label small mb-1">Tipo</label>
+          <SearchableSelect
+            value={tipo}
+            onChange={(v) => {
+              setTipo(v);
+              setIdCurso('');
+              setEditing(null);
+            }}
+            options={tiposOptions}
+            allowClear={false}
+          />
+        </div>
+        <div className="col-12 col-md-7" style={{ maxWidth: '100%', width: 'min(420px, 100%)' }}>
+          <label className="form-label small mb-1">Curso (opcional)</label>
+          <SearchableSelect
+            value={idCurso}
+            onChange={(v) => {
+              setIdCurso(v || '');
+              setEditing(null);
+            }}
+            options={cursoOptions}
+            placeholder="Todos los cursos…"
+          />
+        </div>
       </div>
 
       {editing ? (
@@ -738,6 +778,18 @@ export function GestionTipoCamposPage() {
         >
             {saveMut.isError ? <div className="alert alert-danger small">{saveMut.error?.message}</div> : null}
             <div className="row g-2">
+              <div className="col-12">
+                <label className="form-label small">Aplica a curso</label>
+                <SearchableSelect
+                  value={form.idCurso || ''}
+                  onChange={(v) => setEditing((p) => ({ ...p, idCurso: v || '' }))}
+                  options={cursoOptions}
+                  placeholder="Todos los cursos…"
+                />
+                <div className="form-text">
+                  Vacío = todos los cursos del tipo. Un ID concreto = solo ese curso (override).
+                </div>
+              </div>
               <div className="col-md-3">
                 <label className="form-label small">Clave API</label>
                 <input
@@ -844,6 +896,7 @@ export function GestionTipoCamposPage() {
               <tr>
                 <th>Orden</th>
                 <th>Label</th>
+                <th>Curso</th>
                 <th>Clave</th>
                 <th>Columna</th>
                 <th>Catálogo</th>
@@ -856,13 +909,18 @@ export function GestionTipoCamposPage() {
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="text-center text-muted py-4">Sin campos para este tipo</td>
+                  <td colSpan={10} className="text-center text-muted py-4">Sin campos para este tipo</td>
                 </tr>
               ) : null}
               {rows.map((c) => (
                 <tr key={c.id}>
                   <td>{c.orden}</td>
                   <td className="fw-semibold">{c.label}</td>
+                  <td className="small">
+                    {c.idCurso
+                      ? cursoOptions.find((o) => o.value === String(c.idCurso))?.label || c.idCurso
+                      : 'Todos'}
+                  </td>
                   <td className="small">{c.campoKey}</td>
                   <td className="small">{c.columnaDb}</td>
                   <td className="small">{c.catalogo || '—'}</td>
@@ -877,6 +935,7 @@ export function GestionTipoCamposPage() {
                         setEditing({
                           ...c,
                           catalogo: c.catalogo || '',
+                          idCurso: c.idCurso || '',
                         })
                       }
                     >

@@ -643,7 +643,7 @@ export function GestionParticipantesPage() {
         <input
           className="form-control form-control-sm"
           style={{ maxWidth: '100%', width: '100%' }}
-          placeholder="Buscar por nombre o documento…"
+          placeholder="Buscar por nombre, documento o responsable…"
           value={q}
           onChange={(e) => {
             setQ(e.target.value);

@@ -17,6 +17,7 @@ import { GestionNav } from '../../components/gestion/GestionNav.jsx';
 import { GestionFab } from '../../components/gestion/GestionFab.jsx';
 import { SortableTh, toggleColumnSort } from '../../components/gestion/SortableTh.jsx';
 import { SearchableSelect } from '../../components/gestion/SearchableSelect.jsx';
+import { MultiSearchableSelect } from '../../components/gestion/MultiSearchableSelect.jsx';
 import { GestionPanel, GestionPanelModeToggle } from '../../components/gestion/GestionPanel.jsx';
 import { DrawerSection, SlideDrawer } from '../../components/gestion/SlideDrawer.jsx';
 import { IconCopy, IconEye, IconFilters, IconMonthPass, IconPencil, IconTrash } from '../../components/gestion/GestionIcons.jsx';
@@ -24,6 +25,17 @@ import { AttToast, useAttToast } from '../../components/AttToast.jsx';
 
 const ESTADOS_EDIT = ['CONFIRMADO', 'ACTIVO', 'INCAPACITADO', 'RETIRADO'];
 const SEDES = ['MEDELLÍN', 'RETIRO'];
+
+function asFilterArray(value) {
+  if (Array.isArray(value)) return value.map(String).filter((v) => v && v !== 'TODOS');
+  if (value == null || value === '' || value === 'TODOS') return [];
+  return [String(value)];
+}
+
+function joinFilterParam(values) {
+  const list = asFilterArray(values);
+  return list.length ? list.join(',') : '';
+}
 
 function foldSede(s) {
   return String(s || '')
@@ -187,7 +199,7 @@ function useEntityOptions(kind, enabled, selectedValue, selectedLabel) {
 
 function useCausalesOptions(enabled) {
   const query = useQuery({
-    queryKey: ['gestion-causales', 'v2'],
+    queryKey: ['gestion-causales', 'v3'],
     queryFn: () => getJson('/api/gestion/causales'),
     enabled,
     staleTime: 5 * 60_000,
@@ -202,8 +214,11 @@ function useCausalesOptions(enabled) {
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase()
-        .replace(/\s+/g, ' ');
-      if (seen.has(key)) continue;
+        .replace(/\b(de|del|la|el|los|las|un|una|al|a)\b/g, ' ')
+        .replace(/[^a-z0-9]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (!key || seen.has(key)) continue;
       seen.add(key);
       out.push({ value: label, label });
     }
@@ -1340,13 +1355,14 @@ export function GestionInscripcionesPage({
     () =>
       loadGestionFilters(filterKey, {
         anio: String(now.anio),
-        mes: excludeTipo1 ? '' : now.mes,
-        estado: 'TODOS',
-        sede: '',
+        mes: excludeTipo1 ? [] : [now.mes],
+        estado: [],
+        sede: [],
         q: '',
-        actividad: '',
+        actividad: [],
+        linea: [],
         tipoSel: tipoFijo == null ? '' : String(tipoFijo),
-        idCursoFiltro: '',
+        idCursoFiltro: [],
         fechaDesde: '',
         fechaHasta: '',
       }),
@@ -1355,11 +1371,14 @@ export function GestionInscripcionesPage({
     [filterKey],
   );
   const [anio, setAnio] = useState(String(initialFilters.anio || now.anio));
-  const [mes, setMes] = useState(excludeTipo1 ? '' : String(initialFilters.mes || now.mes));
-  const [estado, setEstado] = useState(initialFilters.estado || 'TODOS');
-  const [sede, setSede] = useState(initialFilters.sede || '');
+  const [mes, setMes] = useState(() =>
+    excludeTipo1 ? [] : asFilterArray(initialFilters.mes?.length ? initialFilters.mes : now.mes),
+  );
+  const [estado, setEstado] = useState(() => asFilterArray(initialFilters.estado));
+  const [sede, setSede] = useState(() => asFilterArray(initialFilters.sede));
   const [q, setQ] = useState(initialFilters.q || '');
-  const [actividad, setActividad] = useState(initialFilters.actividad || '');
+  const [actividad, setActividad] = useState(() => asFilterArray(initialFilters.actividad));
+  const [linea, setLinea] = useState(() => asFilterArray(initialFilters.linea));
   const [fechaDesde, setFechaDesde] = useState(String(initialFilters.fechaDesde || ''));
   const [fechaHasta, setFechaHasta] = useState(String(initialFilters.fechaHasta || ''));
   const [page, setPage] = useState(1);
@@ -1374,31 +1393,33 @@ export function GestionInscripcionesPage({
   const [retirarRow, setRetirarRow] = useState(null);
   const [ficha, setFicha] = useState(null);
   const [exporting, setExporting] = useState(false);
-  const [idCursoFiltro, setIdCursoFiltro] = useState(String(initialFilters.idCursoFiltro || ''));
+  const [idCursoFiltro, setIdCursoFiltro] = useState(() => asFilterArray(initialFilters.idCursoFiltro));
   const [cursoSidebarQ, setCursoSidebarQ] = useState('');
   const [filtrosOpen, setFiltrosOpen] = useState(false);
   const [draftFiltros, setDraftFiltros] = useState({
     anio: String(initialFilters.anio || now.anio),
-    sede: initialFilters.sede || '',
-    actividad: initialFilters.actividad || '',
-    idCursoFiltro: String(initialFilters.idCursoFiltro || ''),
+    sede: asFilterArray(initialFilters.sede),
+    actividad: asFilterArray(initialFilters.actividad),
+    linea: asFilterArray(initialFilters.linea),
+    idCursoFiltro: asFilterArray(initialFilters.idCursoFiltro),
     tipoSel: tipoFijo == null ? String(initialFilters.tipoSel || '') : String(tipoFijo),
     fechaDesde: String(initialFilters.fechaDesde || ''),
     fechaHasta: String(initialFilters.fechaHasta || ''),
   });
 
   useEffect(() => {
-    if (excludeTipo1) setMes('');
+    if (excludeTipo1) setMes([]);
   }, [excludeTipo1]);
 
   useEffect(() => {
     saveGestionFilters(filterKey, {
       anio,
-      mes: excludeTipo1 ? '' : mes,
+      mes: excludeTipo1 ? [] : mes,
       estado,
       sede,
       q,
-      actividad: excludeTipo1 ? '' : actividad,
+      actividad: excludeTipo1 ? [] : actividad,
+      linea,
       tipoSel: excludeTipo1 ? tipoSel : String(tipoFijo ?? 1),
       idCursoFiltro,
       fechaDesde,
@@ -1412,6 +1433,7 @@ export function GestionInscripcionesPage({
     sede,
     q,
     actividad,
+    linea,
     tipoSel,
     idCursoFiltro,
     fechaDesde,
@@ -1453,7 +1475,7 @@ export function GestionInscripcionesPage({
   useEffect(() => {
     if (prevTipoRef.current === effectiveTipo) return;
     prevTipoRef.current = effectiveTipo;
-    setIdCursoFiltro('');
+    setIdCursoFiltro([]);
     setPage(1);
   }, [effectiveTipo]);
 
@@ -1463,27 +1485,33 @@ export function GestionInscripcionesPage({
     if (excludeTipo1) u.set('excludeTipo1', 'true');
     if (effectiveTipo != null && Number.isFinite(effectiveTipo)) u.set('tipo', String(effectiveTipo));
     else if (!excludeTipo1) u.set('tipo', '1');
-    if (!excludeTipo1 && mes) u.set('mes', mes);
-    if (estado && estado !== 'TODOS') u.set('estado', estado);
-    if (sede) u.set('sede', sede);
-    if (!excludeTipo1 && actividad) u.set('actividad', actividad);
-    if (idCursoFiltro) u.set('idCurso', idCursoFiltro);
+    const mesP = joinFilterParam(mes);
+    if (!excludeTipo1 && mesP) u.set('mes', mesP);
+    const estadoP = joinFilterParam(estado);
+    if (estadoP) u.set('estado', estadoP);
+    const sedeP = joinFilterParam(sede);
+    if (sedeP) u.set('sede', sedeP);
+    const actP = joinFilterParam(actividad);
+    if (!excludeTipo1 && actP) u.set('actividad', actP);
+    const linP = joinFilterParam(linea);
+    if (linP) u.set('linea', linP);
+    const cursoP = joinFilterParam(idCursoFiltro);
+    if (cursoP) u.set('idCurso', cursoP);
     if (fechaDesde) u.set('fechaDesde', fechaDesde);
     if (fechaHasta) u.set('fechaHasta', fechaHasta);
-    if (q.trim()) u.set('q', q.trim());
     return u.toString();
   }, [
     anio,
-    effectiveTipo,
-    excludeTipo1,
     mes,
     estado,
     sede,
     actividad,
+    linea,
+    effectiveTipo,
+    excludeTipo1,
     idCursoFiltro,
     fechaDesde,
     fechaHasta,
-    q,
   ]);
 
   const metaQuery = useQuery({
@@ -1511,37 +1539,44 @@ export function GestionInscripcionesPage({
 
   const mesOptions = useMemo(() => {
     const counts = new Map((metaQuery.data?.meses || []).map((m) => [m.mes, m.total]));
-    return [
-      { value: '', label: `Todos (${[...counts.values()].reduce((a, b) => a + b, 0) || 0})` },
-      ...Object.entries(MESES_LABEL).map(([v, l]) => ({
+    return Object.entries(MESES_LABEL)
+      .slice()
+      .sort(([a], [b]) => Number(b) - Number(a))
+      .map(([v, l]) => ({
         value: v,
         label: `${l} (${counts.get(v) || 0})`,
-      })),
-    ];
+      }));
   }, [metaQuery.data]);
 
   const estadoOptions = useMemo(() => {
     const rows = metaQuery.data?.estados || [];
-    const total = rows.reduce((a, r) => a + Number(r.total || 0), 0);
-    return [
-      { value: 'TODOS', label: `Todos (${total})` },
-      ...rows.map((r) => ({
-        value: r.estado,
-        label: `${r.estado} (${r.total})`,
-      })),
-    ];
+    return rows.map((r) => ({
+      value: r.estado,
+      label: `${r.estado} (${r.total})`,
+    }));
   }, [metaQuery.data]);
 
   const actividadOptions = useMemo(() => {
     const rows = metaQuery.data?.actividades || [];
-    return [
-      { value: '', label: 'Todas las actividades' },
-      ...rows.map((r) => ({
-        value: String(r.id),
-        label: `${r.nombre} (${r.total})`,
-      })),
-    ];
+    return rows.map((r) => ({
+      value: String(r.id),
+      label: `${r.nombre} (${r.total})`,
+    }));
   }, [metaQuery.data]);
+
+  const lineaOptions = useMemo(() => {
+    const rows = metaQuery.data?.lineas || [];
+    return rows.map((r) => ({
+      value: String(r.id),
+      label: `${r.nombre || r.id} (${r.total})`,
+      searchText: `${r.id} ${r.nombre || ''}`,
+    }));
+  }, [metaQuery.data]);
+
+  const sedeOptions = useMemo(
+    () => SEDES.map((s) => ({ value: s, label: s })),
+    [],
+  );
 
   const categoriaOptions = useMemo(() => {
     const countMap = new Map(
@@ -1558,37 +1593,36 @@ export function GestionInscripcionesPage({
           actividad: c.actividadId,
         }));
 
+    const actSet = new Set(asFilterArray(actividad).map(String));
     const filtered = catalog.filter((c) => {
-      if (!actividad) return true;
+      if (!actSet.size) return true;
       const actId =
         c.actividad != null && String(c.actividad).trim() !== ''
           ? String(c.actividad)
           : actividadMap.get(String(c.id));
-      return String(actId || '') === String(actividad);
+      return actSet.has(String(actId || ''));
     });
 
-    const total = filtered.reduce((acc, c) => acc + (countMap.get(String(c.id)) || 0), 0);
-    return [
-      { value: '', label: `Todas las categorías (${total})` },
-      ...filtered
-        .slice()
-        .sort((a, b) => String(a.nombre || a.id).localeCompare(String(b.nombre || b.id), 'es'))
-        .map((c) => {
-          const n = countMap.get(String(c.id)) || 0;
-          return {
-            value: String(c.id),
-            label: `${c.nombre || c.id} (${n})`,
-            searchText: `${c.id} ${c.nombre || ''}`,
-          };
-        }),
-    ];
+    return filtered
+      .slice()
+      .sort((a, b) => String(a.nombre || a.id).localeCompare(String(b.nombre || b.id), 'es'))
+      .map((c) => {
+        const n = countMap.get(String(c.id)) || 0;
+        return {
+          value: String(c.id),
+          label: `${c.nombre || c.id} (${n})`,
+          searchText: `${c.id} ${c.nombre || ''}`,
+        };
+      });
   }, [metaQuery.data, cursosSidebar, actividad]);
 
   useEffect(() => {
-    if (!idCursoFiltro || excludeTipo1) return;
-    const stillValid = categoriaOptions.some((o) => o.value === String(idCursoFiltro));
-    if (!stillValid) {
-      setIdCursoFiltro('');
+    const selected = asFilterArray(idCursoFiltro);
+    if (!selected.length || excludeTipo1) return;
+    const valid = new Set(categoriaOptions.map((o) => String(o.value)));
+    const next = selected.filter((id) => valid.has(String(id)));
+    if (next.length !== selected.length) {
+      setIdCursoFiltro(next);
       setPage(1);
     }
   }, [idCursoFiltro, categoriaOptions, excludeTipo1]);
@@ -1598,14 +1632,23 @@ export function GestionInscripcionesPage({
     u.set('anio', anio);
     u.set('page', String(page));
     u.set('limit', '50');
-    if (!excludeTipo1 && mes) u.set('mes', mes);
-    if (estado && estado !== 'TODOS') u.set('estado', estado);
-    if (sede) u.set('sede', sede);
+    const mesP = joinFilterParam(mes);
+    if (!excludeTipo1 && mesP) u.set('mes', mesP);
+    const estadoP = joinFilterParam(
+      asFilterArray(estado).filter((e) => e && e !== 'TODOS'),
+    );
+    if (estadoP) u.set('estado', estadoP);
+    const sedeP = joinFilterParam(sede);
+    if (sedeP) u.set('sede', sedeP);
     if (q.trim()) u.set('q', q.trim());
-    if (!excludeTipo1 && actividad) u.set('actividad', actividad);
+    const actP = joinFilterParam(actividad);
+    if (!excludeTipo1 && actP) u.set('actividad', actP);
+    const linP = joinFilterParam(linea);
+    if (linP) u.set('linea', linP);
     if (excludeTipo1) u.set('excludeTipo1', 'true');
     if (effectiveTipo != null && Number.isFinite(effectiveTipo)) u.set('tipo', String(effectiveTipo));
-    if (idCursoFiltro) u.set('idCurso', idCursoFiltro);
+    const cursoP = joinFilterParam(idCursoFiltro);
+    if (cursoP) u.set('idCurso', cursoP);
     if (fechaDesde) u.set('fechaDesde', fechaDesde);
     if (fechaHasta) u.set('fechaHasta', fechaHasta);
     if (sort.sort) {
@@ -1620,6 +1663,7 @@ export function GestionInscripcionesPage({
     sede,
     q,
     actividad,
+    linea,
     page,
     effectiveTipo,
     excludeTipo1,
@@ -1633,20 +1677,22 @@ export function GestionInscripcionesPage({
   const filtrosAvanzadosActivos = useMemo(() => {
     let n = 0;
     if (String(anio) !== String(now.anio)) n += 1;
-    if (sede) n += 1;
-    if (!excludeTipo1 && actividad) n += 1;
-    if (idCursoFiltro) n += 1;
+    if (asFilterArray(sede).length) n += 1;
+    if (!excludeTipo1 && asFilterArray(actividad).length) n += 1;
+    if (asFilterArray(linea).length) n += 1;
+    if (asFilterArray(idCursoFiltro).length) n += 1;
     if (fechaDesde) n += 1;
     if (fechaHasta) n += 1;
     return n;
-  }, [anio, now.anio, sede, actividad, idCursoFiltro, excludeTipo1, fechaDesde, fechaHasta]);
+  }, [anio, now.anio, sede, actividad, linea, idCursoFiltro, excludeTipo1, fechaDesde, fechaHasta]);
 
   const openFiltrosDrawer = () => {
     setDraftFiltros({
       anio: String(anio || now.anio),
-      sede: sede || '',
-      actividad: actividad || '',
-      idCursoFiltro: idCursoFiltro || '',
+      sede: asFilterArray(sede),
+      actividad: asFilterArray(actividad),
+      linea: asFilterArray(linea),
+      idCursoFiltro: asFilterArray(idCursoFiltro),
       tipoSel: tipoSel || '',
       fechaDesde: fechaDesde || '',
       fechaHasta: fechaHasta || '',
@@ -1665,11 +1711,12 @@ export function GestionInscripcionesPage({
       hasta = tmp;
     }
     setAnio(String(draftFiltros.anio || now.anio));
-    setSede(draftFiltros.sede || '');
+    setSede(asFilterArray(draftFiltros.sede));
+    setLinea(asFilterArray(draftFiltros.linea));
     if (!excludeTipo1) {
-      setActividad(draftFiltros.actividad || '');
+      setActividad(asFilterArray(draftFiltros.actividad));
     }
-    setIdCursoFiltro(draftFiltros.idCursoFiltro || '');
+    setIdCursoFiltro(asFilterArray(draftFiltros.idCursoFiltro));
     setFechaDesde(desde);
     setFechaHasta(hasta);
     setPage(1);
@@ -1679,9 +1726,10 @@ export function GestionInscripcionesPage({
   const limpiarFiltrosDrawer = () => {
     setDraftFiltros({
       anio: String(now.anio),
-      sede: '',
-      actividad: '',
-      idCursoFiltro: '',
+      sede: [],
+      actividad: [],
+      linea: [],
+      idCursoFiltro: [],
       tipoSel: tipoSel || '',
       fechaDesde: '',
       fechaHasta: '',
@@ -1689,12 +1737,13 @@ export function GestionInscripcionesPage({
   };
 
   const quitarFiltroRapido = (key) => {
-    if (key === 'sede') setSede('');
+    if (key === 'sede') setSede([]);
     if (key === 'actividad') {
-      setActividad('');
-      setIdCursoFiltro('');
+      setActividad([]);
+      setIdCursoFiltro([]);
     }
-    if (key === 'idCurso') setIdCursoFiltro('');
+    if (key === 'linea') setLinea([]);
+    if (key === 'idCurso') setIdCursoFiltro([]);
     if (key === 'fechas') {
       setFechaDesde('');
       setFechaHasta('');
@@ -1705,9 +1754,10 @@ export function GestionInscripcionesPage({
 
   const limpiarFiltrosRapidos = () => {
     setAnio(String(now.anio));
-    setSede('');
-    setActividad('');
-    setIdCursoFiltro('');
+    setSede([]);
+    setActividad([]);
+    setLinea([]);
+    setIdCursoFiltro([]);
     setFechaDesde('');
     setFechaHasta('');
     setPage(1);
@@ -1808,7 +1858,7 @@ export function GestionInscripcionesPage({
       const insertados = Number(result?.insertados || 0);
       const haciaRes = result?.hacia || hacia;
       if (haciaRes?.anio) setAnio(String(haciaRes.anio));
-      if (haciaRes?.mes) setMes(String(haciaRes.mes).padStart(2, '0'));
+      if (haciaRes?.mes) setMes([String(haciaRes.mes).padStart(2, '0')]);
       setPage(1);
       await invalidateList(
         insertados > 0
@@ -1847,11 +1897,13 @@ export function GestionInscripcionesPage({
       u.set('export', 'true');
       const data = await getJson(`/api/gestion/inscripciones?${u.toString()}`);
       const rows = data?.inscritos || [];
+      const exportCampos = data?.camposLista || listQuery.data?.camposLista || [];
+      const mesSuffix = joinFilterParam(mes);
       const { exportRowsToExcel } = await import('../../lib/exportExcel.js');
       await exportRowsToExcel({
         rows,
         sheetName: 'Inscripciones',
-        fileNamePrefix: `inscripciones_${anio}${mes ? `_${mes}` : ''}`,
+        fileNamePrefix: `inscripciones_${anio}${mesSuffix ? `_${mesSuffix.replace(/,/g, '-')}` : ''}`,
         columns: [
           { key: 'fechaInscripcion', header: 'Fecha inscripción', format: (v) => formatFechaCorta(v) },
           { key: 'documentoParticipante', header: 'Documento participante' },
@@ -1910,6 +1962,15 @@ export function GestionInscripcionesPage({
             header: 'Fecha retiro transporte',
             format: (v) => formatFechaCorta(v),
           },
+          ...exportCampos.map((c) => ({
+            key: `extra_${c.campoKey}`,
+            header: c.label || c.campoKey,
+            format: (_v, row) => {
+              const found = (row?.camposExtra || []).find((x) => x.campoKey === c.campoKey);
+              if (!found) return '';
+              return found.displayValue ?? found.valueLabel ?? found.value ?? '';
+            },
+          })),
         ],
       });
     } catch (err) {
@@ -1981,7 +2042,7 @@ export function GestionInscripcionesPage({
                   value={tipoSel}
                   onChange={(v) => {
                     setTipoSel(v);
-                    setIdCursoFiltro('');
+                    setIdCursoFiltro([]);
                     setPage(1);
                   }}
                   options={tiposOptions}
@@ -1991,36 +2052,36 @@ export function GestionInscripcionesPage({
               </div>
             ) : null}
             {!excludeTipo1 ? (
-              <div className="col-12 col-sm-4 col-md-3 col-lg-2">
+              <div className="col-12 col-sm-6 col-md-4 col-lg-2">
                 <label className="form-label small mb-1">Mes</label>
-                <SearchableSelect
+                <MultiSearchableSelect
                   value={mes}
                   onChange={(v) => {
-                    setMes(v);
+                    setMes(asFilterArray(v));
                     setPage(1);
                   }}
                   options={mesOptions}
-                  placeholder="Todos"
+                  placeholder="Todos los meses"
                 />
               </div>
             ) : null}
-            <div className="col-12 col-sm-4 col-md-3 col-lg-2">
+            <div className="col-12 col-sm-6 col-md-4 col-lg-2">
               <label className="form-label small mb-1">Estado</label>
-              <SearchableSelect
+              <MultiSearchableSelect
                 value={estado}
                 onChange={(v) => {
-                  setEstado(v || 'TODOS');
+                  setEstado(asFilterArray(v));
                   setPage(1);
                 }}
                 options={estadoOptions}
-                allowClear={false}
+                placeholder="Todos"
               />
             </div>
             <div className={`col-12 col-sm-8 col-md-6 ${excludeTipo1 ? 'col-lg-4' : 'col-lg-5'}`}>
               <label className="form-label small mb-1">Buscar</label>
               <input
                 className="form-control form-control-sm"
-                placeholder="Nombre, documento, curso…"
+                placeholder="Participante, responsable, documento, curso…"
                 value={q}
                 onChange={(e) => {
                   setQ(e.target.value);
@@ -2043,7 +2104,7 @@ export function GestionInscripcionesPage({
                   <span className="att-gestion-filters-btn__hint d-none d-md-inline">
                     {filtrosAvanzadosActivos
                       ? `${filtrosAvanzadosActivos} activo${filtrosAvanzadosActivos === 1 ? '' : 's'}`
-                      : 'Año, sede, fechas…'}
+                      : 'Año, sede, línea…'}
                   </span>
                 </span>
                 {filtrosAvanzadosActivos > 0 ? (
@@ -2067,14 +2128,17 @@ export function GestionInscripcionesPage({
                   </span>
                 </button>
               ) : null}
-              {sede ? (
+              {asFilterArray(sede).length ? (
                 <button
                   type="button"
                   className="att-gestion-filter-chip"
                   onClick={() => quitarFiltroRapido('sede')}
                   title="Quitar sede"
                 >
-                  Sede: {sede}
+                  Sede:{' '}
+                  {asFilterArray(sede)
+                    .map((s) => sedeOptions.find((o) => o.value === String(s))?.label || s)
+                    .join(', ')}
                   <span className="att-gestion-filter-chip__x" aria-hidden="true">
                     ×
                   </span>
@@ -2093,7 +2157,7 @@ export function GestionInscripcionesPage({
                   </span>
                 </button>
               ) : null}
-              {!excludeTipo1 && actividad ? (
+              {!excludeTipo1 && asFilterArray(actividad).length ? (
                 <button
                   type="button"
                   className="att-gestion-filter-chip"
@@ -2101,13 +2165,31 @@ export function GestionInscripcionesPage({
                   title="Quitar actividad"
                 >
                   Actividad:{' '}
-                  {actividadOptions.find((o) => o.value === String(actividad))?.label || actividad}
+                  {asFilterArray(actividad)
+                    .map((a) => actividadOptions.find((o) => o.value === String(a))?.label || a)
+                    .join(', ')}
                   <span className="att-gestion-filter-chip__x" aria-hidden="true">
                     ×
                   </span>
                 </button>
               ) : null}
-              {idCursoFiltro ? (
+              {asFilterArray(linea).length ? (
+                <button
+                  type="button"
+                  className="att-gestion-filter-chip"
+                  onClick={() => quitarFiltroRapido('linea')}
+                  title="Quitar línea"
+                >
+                  Línea:{' '}
+                  {asFilterArray(linea)
+                    .map((l) => lineaOptions.find((o) => o.value === String(l))?.label || l)
+                    .join(', ')}
+                  <span className="att-gestion-filter-chip__x" aria-hidden="true">
+                    ×
+                  </span>
+                </button>
+              ) : null}
+              {asFilterArray(idCursoFiltro).length ? (
                 <button
                   type="button"
                   className="att-gestion-filter-chip"
@@ -2115,9 +2197,14 @@ export function GestionInscripcionesPage({
                   title="Quitar categoría / curso"
                 >
                   {excludeTipo1 ? 'Curso' : 'Categoría'}:{' '}
-                  {categoriaOptions.find((o) => o.value === String(idCursoFiltro))?.label ||
-                    cursosSidebarFromMeta.find((c) => String(c.id) === String(idCursoFiltro))?.nombre ||
-                    idCursoFiltro}
+                  {asFilterArray(idCursoFiltro)
+                    .map(
+                      (id) =>
+                        categoriaOptions.find((o) => o.value === String(id))?.label ||
+                        cursosSidebarFromMeta.find((c) => String(c.id) === String(id))?.nombre ||
+                        id,
+                    )
+                    .join(', ')}
                   <span className="att-gestion-filter-chip__x" aria-hidden="true">
                     ×
                   </span>
@@ -2159,9 +2246,9 @@ export function GestionInscripcionesPage({
             <div className="att-gestion-course-panel__scroll">
               <button
                 type="button"
-                className={`att-gestion-course-panel__item ${!idCursoFiltro ? 'is-active' : ''}`}
+                className={`att-gestion-course-panel__item ${!asFilterArray(idCursoFiltro).length ? 'is-active' : ''}`}
                 onClick={() => {
-                  setIdCursoFiltro('');
+                  setIdCursoFiltro([]);
                   setPage(1);
                 }}
               >
@@ -2173,13 +2260,19 @@ export function GestionInscripcionesPage({
                   <div className="spinner-border spinner-border-sm text-primary" />
                 </div>
               ) : null}
-              {cursosSidebarFiltered.map((c) => (
+              {cursosSidebarFiltered.map((c) => {
+                const selected = asFilterArray(idCursoFiltro).includes(String(c.id));
+                return (
                 <button
                   key={c.id}
                   type="button"
-                  className={`att-gestion-course-panel__item ${idCursoFiltro === String(c.id) ? 'is-active' : ''}`}
+                  className={`att-gestion-course-panel__item ${selected ? 'is-active' : ''}`}
                   onClick={() => {
-                    setIdCursoFiltro(String(c.id));
+                    const id = String(c.id);
+                    setIdCursoFiltro((prev) => {
+                      const cur = asFilterArray(prev);
+                      return cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id];
+                    });
                     setPage(1);
                   }}
                   title={c.nombre}
@@ -2187,7 +2280,8 @@ export function GestionInscripcionesPage({
                   <span className="att-gestion-course-panel__name">{c.nombre || c.id}</span>
                   <span className="att-gestion-course-panel__count">{Number(c.total || 0)}</span>
                 </button>
-              ))}
+              );
+              })}
               {!cursosSidebarQuery.isPending &&
               !metaQuery.isPending &&
               cursosSidebarFromMeta.length === 0 ? (
@@ -2521,10 +2615,19 @@ export function GestionInscripcionesPage({
           </div>
           <div className="mb-2">
             <label className="form-label small mb-1">Sede</label>
-            <SearchableSelect
-              value={draftFiltros.sede}
-              onChange={(v) => setDraftFiltros((p) => ({ ...p, sede: v || '' }))}
-              options={SEDES.map((s) => ({ value: s, label: s }))}
+            <MultiSearchableSelect
+              value={asFilterArray(draftFiltros.sede)}
+              onChange={(v) => setDraftFiltros((p) => ({ ...p, sede: asFilterArray(v) }))}
+              options={sedeOptions}
+              placeholder="Todas"
+            />
+          </div>
+          <div className="mb-2">
+            <label className="form-label small mb-1">Línea</label>
+            <MultiSearchableSelect
+              value={asFilterArray(draftFiltros.linea)}
+              onChange={(v) => setDraftFiltros((p) => ({ ...p, linea: asFilterArray(v) }))}
+              options={lineaOptions}
               placeholder="Todas"
             />
           </div>
@@ -2534,13 +2637,13 @@ export function GestionInscripcionesPage({
           <DrawerSection title="Curso">
             <div className="mb-2">
               <label className="form-label small mb-1">Actividad</label>
-              <SearchableSelect
-                value={draftFiltros.actividad}
+              <MultiSearchableSelect
+                value={asFilterArray(draftFiltros.actividad)}
                 onChange={(v) =>
                   setDraftFiltros((p) => ({
                     ...p,
-                    actividad: v || '',
-                    idCursoFiltro: '',
+                    actividad: asFilterArray(v),
+                    idCursoFiltro: [],
                   }))
                 }
                 options={actividadOptions}
@@ -2549,11 +2652,14 @@ export function GestionInscripcionesPage({
             </div>
             <div className="mb-2">
               <label className="form-label small mb-1">Categoría</label>
-              <SearchableSelect
-                value={draftFiltros.idCursoFiltro}
-                onChange={(v) => setDraftFiltros((p) => ({ ...p, idCursoFiltro: v || '' }))}
+              <MultiSearchableSelect
+                value={asFilterArray(draftFiltros.idCursoFiltro)}
+                onChange={(v) =>
+                  setDraftFiltros((p) => ({ ...p, idCursoFiltro: asFilterArray(v) }))
+                }
                 options={categoriaOptions.filter((o) => {
-                  if (!draftFiltros.actividad) return true;
+                  const draftActs = new Set(asFilterArray(draftFiltros.actividad).map(String));
+                  if (!draftActs.size) return true;
                   if (!o.value) return true;
                   const actMap = new Map(
                     (metaQuery.data?.cursos || []).map((c) => [
@@ -2566,7 +2672,7 @@ export function GestionInscripcionesPage({
                     side?.actividad != null && String(side.actividad).trim() !== ''
                       ? String(side.actividad)
                       : actMap.get(String(o.value));
-                  return String(actId || '') === String(draftFiltros.actividad);
+                  return draftActs.has(String(actId || ''));
                 })}
                 placeholder="Todas…"
               />
