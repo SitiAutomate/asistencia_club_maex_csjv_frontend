@@ -1,5 +1,6 @@
 import { Link, useLocation, useOutletContext } from 'react-router-dom';
 import { canGestion, useGestionPermisos } from '../../lib/useGestionPermisos.js';
+import { IconBall } from './GestionIcons.jsx';
 
 const LINKS = [
   { to: '/gestion', label: 'Inscripciones', modulo: 'inscripciones', match: (p) => p === '/gestion' },
@@ -16,7 +17,13 @@ const LINKS = [
     modulo: 'responsables',
     match: (p) => p.startsWith('/gestion/responsables'),
   },
-  { to: '/gestion/cursos', label: 'Cursos', modulo: 'cursos', match: (p) => p.startsWith('/gestion/cursos') },
+  {
+    to: '/gestion/cursos',
+    label: 'Cursos',
+    modulo: 'cursos',
+    match: (p) => p.startsWith('/gestion/cursos'),
+    icon: IconBall,
+  },
   {
     to: '/gestion/entrenadores',
     label: 'Entrenadores',
@@ -50,6 +57,7 @@ export function GestionNav() {
       <div className="att-gestion-nav__links">
         {visible.map((link) => {
           const active = link.match(pathname);
+          const Icon = link.icon;
           return (
             <Link
               key={link.to}
@@ -57,6 +65,11 @@ export function GestionNav() {
               className={`att-gestion-nav__link ${active ? 'is-active' : ''}`}
               aria-current={active ? 'page' : undefined}
             >
+              {Icon ? (
+                <span className="att-gestion-nav__icon" aria-hidden="true">
+                  <Icon size={15} />
+                </span>
+              ) : null}
               {link.label}
             </Link>
           );

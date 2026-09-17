@@ -21,20 +21,23 @@ export function fechaHoyBogotaClient() {
 }
 
 /**
- * Periodos permitidos para nuevas inscripciones:
- * mes actual y siguiente (en diciembre el siguiente es enero del año siguiente).
+ * Periodos permitidos para nuevas inscripciones / retiros:
+ * mes actual y los dos siguientes (en diciembre: ene y feb del año siguiente).
  */
 export function periodosInscripcionPermitidosClient() {
   const { anio, mesNum } = anioMesBogotaClient();
-  const actual = { anio, mes: String(mesNum).padStart(2, '0') };
-  let nextAnio = anio;
-  let nextMes = mesNum + 1;
-  if (nextMes > 12) {
-    nextMes = 1;
-    nextAnio = anio + 1;
+  const out = [];
+  let a = anio;
+  let m = mesNum;
+  for (let i = 0; i < 3; i += 1) {
+    out.push({ anio: a, mes: String(m).padStart(2, '0') });
+    m += 1;
+    if (m > 12) {
+      m = 1;
+      a += 1;
+    }
   }
-  const siguiente = { anio: nextAnio, mes: String(nextMes).padStart(2, '0') };
-  return [actual, siguiente];
+  return out;
 }
 
 export function isPeriodoInscripcionPermitidoClient(anio, mes) {

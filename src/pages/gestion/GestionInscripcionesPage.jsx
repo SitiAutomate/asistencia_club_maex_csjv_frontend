@@ -10,7 +10,6 @@ import { anioMesBogotaClient, isPeriodoInscripcionPermitidoClient, periodosInscr
 import { loadGestionFilters, saveGestionFilters } from '../../lib/gestionFiltersStorage.js';
 import {
   formatCurrencyCop,
-  humanizeLabel,
   MESES_LABEL,
 } from '../../lib/gestionFormat.js';
 import { GestionNav } from '../../components/gestion/GestionNav.jsx';
@@ -102,11 +101,16 @@ function buildAnioOptions(metaAnios, currentAnio) {
 
 function DetailField({ label, children }) {
   return (
-    <div className="col-12 col-md-6">
-      <div className="small text-muted mb-1">{label}</div>
-      <div className="fw-semibold text-break">{children || '—'}</div>
+    <div className="att-detail-item">
+      <span className="att-detail-item__label">{label}</span>
+      <span className="att-detail-item__value">{children ?? '—'}</span>
     </div>
   );
+}
+
+function fichaVal(value) {
+  if (value == null || String(value).trim() === '') return '—';
+  return String(value);
 }
 
 function FichaModal({ kind, documento, onClose }) {
@@ -122,13 +126,21 @@ function FichaModal({ kind, documento, onClose }) {
   });
 
   const data = kind === 'participante' ? query.data?.participante : query.data?.responsable;
+  const isPart = kind === 'participante';
 
   return (
     <GestionPanel
       open={Boolean(documento)}
       onClose={onClose}
-      title={kind === 'participante' ? 'Participante' : 'Responsable'}
-      width={520}
+      eyebrow="Ficha"
+      title={
+        data?.nombreCompleto ||
+        (query.isPending ? 'Cargando…' : isPart ? 'Participante' : 'Responsable')
+      }
+      subtitle={data?.documento || documento || undefined}
+      width={560}
+      size="lg"
+      className="att-ficha-modal"
     >
       {query.isPending ? (
         <div className="text-center py-4">
@@ -136,16 +148,84 @@ function FichaModal({ kind, documento, onClose }) {
         </div>
       ) : null}
       {query.isError ? <div className="alert alert-danger small">{query.error?.message}</div> : null}
-      {data ? (
-        <div className="row g-3">
-          {Object.entries(data).map(([key, value]) => (
-            <DetailField key={key} label={humanizeLabel(key)}>
-              {String(key).toLowerCase().includes('fecha') ||
-              String(key).toLowerCase().includes('nacimiento')
-                ? formatFechaCorta(value)
-                : String(value ?? '')}
-            </DetailField>
-          ))}
+      {data && isPart ? (
+        <div className="att-detail-sections att-ficha">
+          <section className="att-detail-section">
+            <h6 className="att-detail-section__title">Identificación</h6>
+            <div className="att-detail-grid">
+              <DetailField label="Documento">{fichaVal(data.documento)}</DetailField>
+              <DetailField label="Tipo documento">{fichaVal(data.tipoDocumento)}</DetailField>
+              <DetailField label="Interno / externo">{fichaVal(data.internoExterno)}</DetailField>
+              <DetailField label="Grupo">{fichaVal(data.grupo)}</DetailField>
+              <DetailField label="Nacimiento">{formatFechaCorta(data.fechaNacimiento)}</DetailField>
+            </div>
+          </section>
+          <section className="att-detail-section">
+            <h6 className="att-detail-section__title">Nombre</h6>
+            <div className="att-detail-grid">
+              <DetailField label="Primer nombre">{fichaVal(data.primerNombre)}</DetailField>
+              <DetailField label="Segundo nombre">{fichaVal(data.segundoNombre)}</DetailField>
+              <DetailField label="Primer apellido">{fichaVal(data.primerApellido)}</DetailField>
+              <DetailField label="Segundo apellido">{fichaVal(data.segundoApellido)}</DetailField>
+              <DetailField label="Nombre completo">{fichaVal(data.nombreCompleto)}</DetailField>
+            </div>
+          </section>
+          <section className="att-detail-section">
+            <h6 className="att-detail-section__title">Responsable</h6>
+            <div className="att-detail-grid">
+              <DetailField label="Documento">{fichaVal(data.idResponsable)}</DetailField>
+              <DetailField label="Nombre">{fichaVal(data.nombreResponsable)}</DetailField>
+              <DetailField label="Celular">{fichaVal(data.celularResponsable)}</DetailField>
+              <DetailField label="Correo">{fichaVal(data.correoResponsable)}</DetailField>
+            </div>
+          </section>
+          <div className="att-detail-split">
+            <section className="att-detail-section">
+              <h6 className="att-detail-section__title">Padre</h6>
+              <div className="att-detail-grid att-detail-grid--compact">
+                <DetailField label="Documento">{fichaVal(data.documentoPadre)}</DetailField>
+                <DetailField label="Nombre">{fichaVal(data.nombrePadre)}</DetailField>
+                <DetailField label="Celular">{fichaVal(data.celularPadre)}</DetailField>
+                <DetailField label="Correo">{fichaVal(data.emailPadre)}</DetailField>
+              </div>
+            </section>
+            <section className="att-detail-section">
+              <h6 className="att-detail-section__title">Madre</h6>
+              <div className="att-detail-grid att-detail-grid--compact">
+                <DetailField label="Documento">{fichaVal(data.documentoMadre)}</DetailField>
+                <DetailField label="Nombre">{fichaVal(data.nombreMadre)}</DetailField>
+                <DetailField label="Celular">{fichaVal(data.celularMadre)}</DetailField>
+                <DetailField label="Correo">{fichaVal(data.emailMadre)}</DetailField>
+              </div>
+            </section>
+          </div>
+        </div>
+      ) : null}
+      {data && !isPart ? (
+        <div className="att-detail-sections att-ficha">
+          <section className="att-detail-section">
+            <h6 className="att-detail-section__title">Identificación</h6>
+            <div className="att-detail-grid">
+              <DetailField label="Documento">{fichaVal(data.documento)}</DetailField>
+              <DetailField label="Tipo identificación">{fichaVal(data.tipoIdentificacion)}</DetailField>
+              <DetailField label="Tipo persona">{fichaVal(data.tipoPersona)}</DetailField>
+            </div>
+          </section>
+          <section className="att-detail-section">
+            <h6 className="att-detail-section__title">Contacto</h6>
+            <div className="att-detail-grid">
+              <DetailField label="Nombre completo">{fichaVal(data.nombreCompleto)}</DetailField>
+              <DetailField label="Nombres">{fichaVal(data.nombres)}</DetailField>
+              <DetailField label="Apellidos">{fichaVal(data.apellidos)}</DetailField>
+              <DetailField label="Celular">{fichaVal(data.celular)}</DetailField>
+              <DetailField label="Correo">{fichaVal(data.correo)}</DetailField>
+              <DetailField label="Departamento">
+                {fichaVal(data.nombreDepartamento || data.departamento)}
+              </DetailField>
+              <DetailField label="Ciudad">{fichaVal(data.nombreCiudad || data.ciudad)}</DetailField>
+              <DetailField label="Dirección">{fichaVal(data.direccion)}</DetailField>
+            </div>
+          </section>
         </div>
       ) : null}
     </GestionPanel>

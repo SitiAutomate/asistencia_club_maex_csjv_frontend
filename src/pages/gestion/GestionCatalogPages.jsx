@@ -773,6 +773,18 @@ export function GestionParticipantesPage() {
               <DrawerField label="Celular">{detail.celularResponsable || '—'}</DrawerField>
               <DrawerField label="Correo">{detail.correoResponsable || '—'}</DrawerField>
             </DrawerSection>
+            <DrawerSection title="Padre">
+              <DrawerField label="Documento">{detail.documentoPadre || '—'}</DrawerField>
+              <DrawerField label="Nombre">{detail.nombrePadre || '—'}</DrawerField>
+              <DrawerField label="Celular">{detail.celularPadre || '—'}</DrawerField>
+              <DrawerField label="Correo">{detail.emailPadre || '—'}</DrawerField>
+            </DrawerSection>
+            <DrawerSection title="Madre">
+              <DrawerField label="Documento">{detail.documentoMadre || '—'}</DrawerField>
+              <DrawerField label="Nombre">{detail.nombreMadre || '—'}</DrawerField>
+              <DrawerField label="Celular">{detail.celularMadre || '—'}</DrawerField>
+              <DrawerField label="Correo">{detail.emailMadre || '—'}</DrawerField>
+            </DrawerSection>
           </>
         ) : null}
       </GestionPanel>
@@ -1466,7 +1478,7 @@ export function GestionCursosCatalogPage() {
       </div>
       {periodoCupos.length ? (
         <p className="small text-muted mb-2">
-          Cupos llenos = participantes distintos en mes actual y siguiente (
+          Cupos llenos = participantes distintos en los meses de inscripción permitidos (
           {periodoCupos
             .map((p) => `${MESES_LABEL[String(p.mes).padStart(2, '0')] || p.mes} ${p.anio}`)
             .join(' · ')}

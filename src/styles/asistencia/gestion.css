@@ -188,6 +188,7 @@ td.att-gestion-cell-clip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 0.35rem;
   min-height: 2rem;
   padding: 0.28rem 0.7rem;
   border: 1px solid #d0dae6;
@@ -201,6 +202,14 @@ td.att-gestion-cell-clip {
   white-space: nowrap;
   box-sizing: border-box;
   transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.att-gestion-nav__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 0;
 }
 
 .att-gestion-nav__link:hover {
@@ -735,6 +744,25 @@ td.att-gestion-cell-clip {
 
 .att-detail-item--wide {
   grid-column: 1 / -1;
+}
+
+.att-ficha .att-detail-split {
+  display: grid;
+  gap: 0.85rem;
+}
+
+@media (min-width: 768px) {
+  .att-ficha .att-detail-split {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .att-ficha .att-detail-split .att-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.att-ficha-modal .att-detail-section {
+  background: linear-gradient(180deg, #fbfdff 0%, #fff 100%);
 }
 
 .att-detail-item__label {

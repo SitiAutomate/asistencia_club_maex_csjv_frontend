@@ -135,3 +135,18 @@ export function IconFilters({ size = 16 }) {
     </svg>
   );
 }
+
+/** Balón de fútbol para navegación de cursos. */
+export function IconBall({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.7" />
+      <path
+        d="M12 3.2 14.6 8.2 20 9.2l-4 3.8.9 5.3L12 15.8 7.1 18.3l.9-5.3-4-3.8 5.4-1L12 3.2Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
