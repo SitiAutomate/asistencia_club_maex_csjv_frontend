@@ -190,6 +190,8 @@ function emptyCursoForm(tipo) {
     actividad: '',
     linea: '',
     docente: '',
+    cuposMinimos: '',
+    cuposMaximos: '',
     fechaInicio: '',
     fechaFinal: '',
     lunes: '',
@@ -227,6 +229,14 @@ function CursoFormModal({
         tarifa: digitsOnly(editing.tarifa),
         estado: editing.estado || 'ACTIVO',
         sede: editing.sede || 'MEDELLÍN',
+        cuposMinimos:
+          editing.cuposMinimos != null && String(editing.cuposMinimos).trim() !== ''
+            ? String(editing.cuposMinimos)
+            : '',
+        cuposMaximos:
+          editing.cuposMaximos != null && String(editing.cuposMaximos).trim() !== ''
+            ? String(editing.cuposMaximos)
+            : '',
         fechaInicio: toDateInput(editing.fechaInicio),
         fechaFinal: toDateInput(editing.fechaFinal),
         lunes: isDayOn(editing.lunes) ? 'X' : '',
@@ -400,6 +410,28 @@ function CursoFormModal({
                   className="form-control form-control-sm"
                   value={form.codigoFacturacion}
                   onChange={(e) => setForm((p) => ({ ...p, codigoFacturacion: e.target.value }))}
+                />
+              </div>
+              <div className="col-md-3">
+                <label className="form-label small">Cupos mínimos</label>
+                <input
+                  className="form-control form-control-sm"
+                  inputMode="numeric"
+                  value={form.cuposMinimos}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, cuposMinimos: digitsOnly(e.target.value) }))
+                  }
+                />
+              </div>
+              <div className="col-md-3">
+                <label className="form-label small">Cupos máximos</label>
+                <input
+                  className="form-control form-control-sm"
+                  inputMode="numeric"
+                  value={form.cuposMaximos}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, cuposMaximos: digitsOnly(e.target.value) }))
+                  }
                 />
               </div>
               <div className="col-md-6">
@@ -1331,6 +1363,8 @@ export function GestionCursosCatalogPage() {
         docente: form.docente || null,
         estado: form.estado || 'ACTIVO',
         sede: form.sede || null,
+        cuposMinimos: form.cuposMinimos === '' ? null : digitsOnly(form.cuposMinimos) || null,
+        cuposMaximos: form.cuposMaximos === '' ? null : digitsOnly(form.cuposMaximos) || null,
         fechaInicio: toDateInput(form.fechaInicio) || null,
         fechaFinal: toDateInput(form.fechaFinal) || null,
         lunes: form.lunes || null,
