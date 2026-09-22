@@ -1,8 +1,8 @@
-/** Persistencia ligera de filtros de gestión en sessionStorage. */
+/** Persistencia de filtros de gestión en localStorage (sobrevive recargas). */
 
 export function loadGestionFilters(key, defaults = {}) {
   try {
-    const raw = sessionStorage.getItem(key);
+    const raw = localStorage.getItem(key) ?? sessionStorage.getItem(key);
     if (!raw) return { ...defaults };
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return { ...defaults };
@@ -14,8 +14,17 @@ export function loadGestionFilters(key, defaults = {}) {
 
 export function saveGestionFilters(key, values) {
   try {
-    sessionStorage.setItem(key, JSON.stringify(values));
+    localStorage.setItem(key, JSON.stringify(values));
+    try {
+      sessionStorage.removeItem(key);
+    } catch {
+      /* ignore */
+    }
   } catch {
-    /* ignore quota / private mode */
+    try {
+      sessionStorage.setItem(key, JSON.stringify(values));
+    } catch {
+      /* ignore quota / private mode */
+    }
   }
 }

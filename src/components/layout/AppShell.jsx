@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getJson, setStoredToken } from '../../lib/api.js';
@@ -9,6 +9,7 @@ import {
   NAV_KEY_GESTION_MODULO,
   useGestionPermisos,
 } from '../../lib/useGestionPermisos.js';
+import { saveLastRoute } from '../../lib/lastRouteStorage.js';
 import { IconClose, IconMenu } from '../asistencia/AttendanceIcons.jsx';
 import '../../styles/asistencia/index.css';
 
@@ -40,6 +41,10 @@ export function AppShell() {
   const location = useLocation();
   const navigate = useNavigate();
   const title = ROUTE_TITLES[location.pathname] || 'Panel';
+
+  useEffect(() => {
+    saveLastRoute(location.pathname);
+  }, [location.pathname]);
 
   const meQuery = useQuery({
     queryKey: ['auth', 'me'],
@@ -172,7 +177,7 @@ export function AppShell() {
             <img
               src={LOGO_SRC}
               alt=""
-              height={32}
+              height={24}
               onError={(e) => {
                 if (e.target.dataset.fallbackApplied === '1') {
                   e.target.style.display = 'none';

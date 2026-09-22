@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { normalizeForSearch } from '../../lib/normalizeSearch.js';
+import { GestionSearchInput } from './GestionSearchInput.jsx';
 
 /**
  * Select múltiple con buscador.
@@ -114,9 +115,7 @@ export function MultiSearchableSelect({
       className="att-search-select__dropdown att-search-select__dropdown--portal"
       style={menuStyle}
     >
-      <input
-        type="search"
-        className="form-control form-control-sm mb-2"
+      <GestionSearchInput
         placeholder="Buscar…"
         value={q}
         autoFocus

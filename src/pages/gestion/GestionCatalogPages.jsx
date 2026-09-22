@@ -14,6 +14,7 @@ import { GestionNav } from '../../components/gestion/GestionNav.jsx';
 import { GestionFab } from '../../components/gestion/GestionFab.jsx';
 import { DrawerField, DrawerSection } from '../../components/gestion/SlideDrawer.jsx';
 import { GestionPanel, GestionPanelModeToggle } from '../../components/gestion/GestionPanel.jsx';
+import { GestionSearchInput } from '../../components/gestion/GestionSearchInput.jsx';
 import { AttToast, useAttToast } from '../../components/AttToast.jsx';
 import {
   TIPOS_DOC_PARTICIPANTE,
@@ -672,8 +673,7 @@ export function GestionParticipantesPage() {
         </div>
       </div>
       <div className="mb-3">
-        <input
-          className="form-control form-control-sm"
+        <GestionSearchInput
           style={{ maxWidth: '100%', width: '100%' }}
           placeholder="Buscar por nombre, documento o responsable…"
           value={q}
@@ -1142,8 +1142,7 @@ export function GestionResponsablesPage() {
         </div>
       </div>
       <div className="mb-3">
-        <input
-          className="form-control form-control-sm"
+        <GestionSearchInput
           style={{ maxWidth: '100%', width: '100%' }}
           placeholder="Buscar…"
           value={q}
@@ -1502,8 +1501,7 @@ export function GestionCursosCatalogPage() {
           />
         </div>
         <div className="col-12 col-sm-6 col-md-3">
-          <input
-            className="form-control form-control-sm"
+          <GestionSearchInput
             placeholder="Buscar curso…"
             value={q}
             onChange={(e) => setQ(e.target.value)}

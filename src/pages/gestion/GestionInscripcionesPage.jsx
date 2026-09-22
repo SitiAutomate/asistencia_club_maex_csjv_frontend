@@ -9,6 +9,12 @@ import { formatFechaCorta, toDateInput } from '../../lib/formatDate.js';
 import { anioMesBogotaClient, isPeriodoInscripcionPermitidoClient, periodosInscripcionPermitidosClient, fechaHoyBogotaClient } from '../../lib/gestionHelpers.js';
 import { loadGestionFilters, saveGestionFilters } from '../../lib/gestionFiltersStorage.js';
 import {
+  DEFAULT_INSCRIPCIONES_COL_WIDTHS,
+  loadColWidths,
+  saveColWidths,
+  startColumnResize,
+} from '../../lib/gestionColWidths.js';
+import {
   formatCurrencyCop,
   MESES_LABEL,
 } from '../../lib/gestionFormat.js';
@@ -19,11 +25,36 @@ import { SearchableSelect } from '../../components/gestion/SearchableSelect.jsx'
 import { MultiSearchableSelect } from '../../components/gestion/MultiSearchableSelect.jsx';
 import { GestionPanel, GestionPanelModeToggle } from '../../components/gestion/GestionPanel.jsx';
 import { DrawerSection, SlideDrawer } from '../../components/gestion/SlideDrawer.jsx';
+import { GestionSearchInput } from '../../components/gestion/GestionSearchInput.jsx';
 import { IconCopy, IconEye, IconFilters, IconMonthPass, IconPencil, IconTrash } from '../../components/gestion/GestionIcons.jsx';
 import { AttToast, useAttToast } from '../../components/AttToast.jsx';
 
+/** Evita disparar la lista en cada tecla del buscador. */
+function useDebouncedValue(value, delayMs = 350) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebounced(value), delayMs);
+    return () => window.clearTimeout(t);
+  }, [value, delayMs]);
+  return debounced;
+}
+
 const ESTADOS_EDIT = ['CONFIRMADO', 'ACTIVO', 'INCAPACITADO', 'RETIRADO'];
 const SEDES = ['MEDELLÍN', 'RETIRO'];
+const MESES_SHORT = {
+  '01': 'Ene',
+  '02': 'Feb',
+  '03': 'Mar',
+  '04': 'Abr',
+  '05': 'May',
+  '06': 'Jun',
+  '07': 'Jul',
+  '08': 'Ago',
+  '09': 'Sep',
+  '10': 'Oct',
+  '11': 'Nov',
+  '12': 'Dic',
+};
 
 function asFilterArray(value) {
   if (Array.isArray(value)) return value.map(String).filter((v) => v && v !== 'TODOS');
@@ -93,7 +124,7 @@ function buildAnioOptions(metaAnios, currentAnio) {
     if (r?.anio) set.add(String(r.anio));
   });
   const base = Number(currentAnio) || anioMesBogotaClient().anio;
-  for (let y = base - 1; y <= base + 1; y += 1) set.add(String(y));
+  for (let y = base - 3; y <= base + 1; y += 1) set.add(String(y));
   return [...set]
     .sort((a, b) => Number(b) - Number(a))
     .map((y) => ({ value: y, label: y }));
@@ -1451,9 +1482,11 @@ export function GestionInscripcionesPage({
     [filterKey],
   );
   const [anio, setAnio] = useState(String(initialFilters.anio || now.anio));
-  const [mes, setMes] = useState(() =>
-    excludeTipo1 ? [] : asFilterArray(initialFilters.mes?.length ? initialFilters.mes : now.mes),
-  );
+  const [mes, setMes] = useState(() => {
+    if (excludeTipo1) return [];
+    const arr = asFilterArray(initialFilters.mes?.length ? initialFilters.mes : now.mes);
+    return arr.slice(0, 1);
+  });
   const [estado, setEstado] = useState(() => asFilterArray(initialFilters.estado));
   const [sede, setSede] = useState(() => asFilterArray(initialFilters.sede));
   const [q, setQ] = useState(initialFilters.q || '');
@@ -1473,9 +1506,15 @@ export function GestionInscripcionesPage({
   const [retirarRow, setRetirarRow] = useState(null);
   const [ficha, setFicha] = useState(null);
   const [exporting, setExporting] = useState(false);
-  const [idCursoFiltro, setIdCursoFiltro] = useState(() => asFilterArray(initialFilters.idCursoFiltro));
+  const [idCursoFiltro, setIdCursoFiltro] = useState(() =>
+    asFilterArray(initialFilters.idCursoFiltro).slice(0, 1),
+  );
   const [cursoSidebarQ, setCursoSidebarQ] = useState('');
   const [filtrosOpen, setFiltrosOpen] = useState(false);
+  const [colWidths, setColWidths] = useState(() => loadColWidths(DEFAULT_INSCRIPCIONES_COL_WIDTHS));
+  const colWidthsRef = useRef(colWidths);
+  colWidthsRef.current = colWidths;
+  const qDebounced = useDebouncedValue(q, 350);
   const [draftFiltros, setDraftFiltros] = useState({
     anio: String(initialFilters.anio || now.anio),
     sede: asFilterArray(initialFilters.sede),
@@ -1565,8 +1604,7 @@ export function GestionInscripcionesPage({
     if (excludeTipo1) u.set('excludeTipo1', 'true');
     if (effectiveTipo != null && Number.isFinite(effectiveTipo)) u.set('tipo', String(effectiveTipo));
     else if (!excludeTipo1) u.set('tipo', '1');
-    const mesP = joinFilterParam(mes);
-    if (!excludeTipo1 && mesP) u.set('mes', mesP);
+    // No incluir mes: al cambiar mes no hace falta recalcular facetas (el facet de mes lo omite).
     const estadoP = joinFilterParam(estado);
     if (estadoP) u.set('estado', estadoP);
     const sedeP = joinFilterParam(sede);
@@ -1582,7 +1620,6 @@ export function GestionInscripcionesPage({
     return u.toString();
   }, [
     anio,
-    mes,
     estado,
     sede,
     actividad,
@@ -1598,7 +1635,25 @@ export function GestionInscripcionesPage({
     queryKey: ['gestion-filtros-meta', metaParams],
     queryFn: () => getJson(`/api/gestion/filtros-meta?${metaParams}`),
     enabled: isAdminLike(user) && (tipoFijo != null || Boolean(effectiveTipo)),
-    staleTime: 15_000,
+    staleTime: 45_000,
+    placeholderData: (prev) => prev,
+  });
+
+  /** Meses del panel izquierdo: solo año+tipo (barato y estable al filtrar). */
+  const mesesSidebarParams = useMemo(() => {
+    if (excludeTipo1) return '';
+    const u = new URLSearchParams();
+    u.set('anio', anio);
+    u.set('tipo', '1');
+    return u.toString();
+  }, [anio, excludeTipo1]);
+
+  const mesesSidebarQuery = useQuery({
+    queryKey: ['gestion-meses-sidebar', mesesSidebarParams],
+    queryFn: () => getJson(`/api/gestion/filtros-meta?${mesesSidebarParams}`),
+    enabled: isAdminLike(user) && !excludeTipo1 && Boolean(mesesSidebarParams),
+    staleTime: 120_000,
+    placeholderData: (prev) => prev,
   });
 
   const anioOptions = useMemo(
@@ -1608,25 +1663,36 @@ export function GestionInscripcionesPage({
 
   const anioFilterOptions = useMemo(() => {
     const rows = metaQuery.data?.anios || [];
-    if (rows.length) {
-      return rows.map((r) => ({
-        value: String(r.anio),
-        label: `${r.anio} (${r.total})`,
-      }));
+    const byValue = new Map();
+    // Base: años recientes siempre disponibles (evita que el facet vacío “rompa” el filtro).
+    for (const o of anioOptions) {
+      byValue.set(String(o.value), { value: String(o.value), label: String(o.label) });
     }
-    return anioOptions;
-  }, [metaQuery.data, anioOptions]);
+    for (const r of rows) {
+      const v = String(r.anio);
+      byValue.set(v, { value: v, label: `${r.anio} (${r.total})` });
+    }
+    if (anio && !byValue.has(String(anio))) {
+      byValue.set(String(anio), { value: String(anio), label: String(anio) });
+    }
+    return [...byValue.values()].sort((a, b) => Number(b.value) - Number(a.value));
+  }, [metaQuery.data, anioOptions, anio]);
 
   const mesOptions = useMemo(() => {
-    const counts = new Map((metaQuery.data?.meses || []).map((m) => [m.mes, m.total]));
+    const source = mesesSidebarQuery.data?.meses || metaQuery.data?.meses || [];
+    const counts = new Map(source.map((m) => [String(m.mes).padStart(2, '0'), Number(m.total || 0)]));
+    const selected = asFilterArray(mes).map((m) => String(m).padStart(2, '0'));
     return Object.entries(MESES_LABEL)
       .slice()
       .sort(([a], [b]) => Number(b) - Number(a))
       .map(([v, l]) => ({
         value: v,
-        label: `${l} (${counts.get(v) || 0})`,
-      }));
-  }, [metaQuery.data]);
+        label: l,
+        shortLabel: MESES_SHORT[v] || l.slice(0, 3),
+        total: counts.get(v) || 0,
+      }))
+      .filter((o) => o.total > 0 || selected.includes(o.value));
+  }, [mesesSidebarQuery.data, metaQuery.data, mes]);
 
   const estadoOptions = useMemo(() => {
     const rows = metaQuery.data?.estados || [];
@@ -1720,7 +1786,7 @@ export function GestionInscripcionesPage({
     if (estadoP) u.set('estado', estadoP);
     const sedeP = joinFilterParam(sede);
     if (sedeP) u.set('sede', sedeP);
-    if (q.trim()) u.set('q', q.trim());
+    if (qDebounced.trim()) u.set('q', qDebounced.trim());
     const actP = joinFilterParam(actividad);
     if (!excludeTipo1 && actP) u.set('actividad', actP);
     const linP = joinFilterParam(linea);
@@ -1741,7 +1807,7 @@ export function GestionInscripcionesPage({
     mes,
     estado,
     sede,
-    q,
+    qDebounced,
     actividad,
     linea,
     page,
@@ -1753,6 +1819,14 @@ export function GestionInscripcionesPage({
     sort.sort,
     sort.dir,
   ]);
+
+  // Al terminar de tipear, volver a página 1 sin esperar otro efecto de setPage en cada tecla.
+  const prevQDebounced = useRef(qDebounced);
+  useEffect(() => {
+    if (prevQDebounced.current === qDebounced) return;
+    prevQDebounced.current = qDebounced;
+    setPage(1);
+  }, [qDebounced]);
 
   const filtrosAvanzadosActivos = useMemo(() => {
     let n = 0;
@@ -1796,7 +1870,7 @@ export function GestionInscripcionesPage({
     if (!excludeTipo1) {
       setActividad(asFilterArray(draftFiltros.actividad));
     }
-    setIdCursoFiltro(asFilterArray(draftFiltros.idCursoFiltro));
+    setIdCursoFiltro(asFilterArray(draftFiltros.idCursoFiltro).slice(0, 1));
     setFechaDesde(desde);
     setFechaHasta(hasta);
     setPage(1);
@@ -1850,15 +1924,19 @@ export function GestionInscripcionesPage({
     queryKey: ['gestion-inscripciones', listParams],
     queryFn: () => getJson(`/api/gestion/inscripciones?${listParams}`),
     enabled: listEnabled,
+    staleTime: 20_000,
+    placeholderData: (prev) => prev,
   });
 
   useEffect(() => {
-    const rows = metaQuery.data?.anios || [];
-    if (!rows.length) return;
-    const values = rows.map((r) => String(r.anio));
-    if (!values.includes(String(anio))) {
-      setAnio(values[0]);
-      setPage(1);
+    // No pisar un año válido elegido por el usuario solo porque el facet no lo trae
+    // (p. ej. por otros filtros activos en Otros tipos).
+    if (!/^\d{4}$/.test(String(anio || ''))) {
+      const rows = metaQuery.data?.anios || [];
+      if (rows.length) {
+        setAnio(String(rows[0].anio));
+        setPage(1);
+      }
     }
   }, [metaQuery.data, anio]);
 
@@ -1882,25 +1960,30 @@ export function GestionInscripcionesPage({
   );
 
   const cursosSidebarFiltered = useMemo(() => {
-    const q = String(cursoSidebarQ || '')
+    const selected = new Set(asFilterArray(idCursoFiltro).map(String));
+    const withData = cursosSidebarFromMeta.filter(
+      (c) => Number(c.total || 0) > 0 || selected.has(String(c.id)),
+    );
+    const qNorm = String(cursoSidebarQ || '')
       .trim()
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '');
-    if (!q) return cursosSidebarFromMeta;
-    return cursosSidebarFromMeta.filter((c) => {
+    if (!qNorm) return withData;
+    return withData.filter((c) => {
       const hay = `${c.id || ''} ${c.nombre || ''}`
         .toLowerCase()
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '');
-      return hay.includes(q);
+      return hay.includes(qNorm);
     });
-  }, [cursosSidebarFromMeta, cursoSidebarQ]);
+  }, [cursosSidebarFromMeta, cursoSidebarQ, idCursoFiltro]);
 
   const invalidateList = async (message) => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['gestion-inscripciones'] }),
       queryClient.invalidateQueries({ queryKey: ['gestion-filtros-meta'] }),
+      queryClient.invalidateQueries({ queryKey: ['gestion-meses-sidebar'] }),
       queryClient.invalidateQueries({ queryKey: ['gestion-cursos'] }),
       queryClient.invalidateQueries({ queryKey: ['gestion-cursos-sidebar'] }),
     ]);
@@ -2067,11 +2150,60 @@ export function GestionInscripcionesPage({
   const rows = listQuery.data?.inscritos || [];
   const meta = listQuery.data?.meta || { page: 1, totalPages: 1, total: 0 };
   const camposLista = listQuery.data?.camposLista || [];
-  const tableColSpan = 9 + camposLista.length;
+  const tableColSpan = 11 + camposLista.length;
+  const showSidebar = !excludeTipo1 || Boolean(effectiveTipo);
+
+  const colStyle = (key) => {
+    const w =
+      colWidths[key] ??
+      DEFAULT_INSCRIPCIONES_COL_WIDTHS[key] ??
+      (String(key).startsWith('extra_') ? 100 : undefined);
+    if (w == null) return undefined;
+    return { width: w, minWidth: w, maxWidth: w };
+  };
+
+  const onColResizeStart = (key, e) => {
+    const startX = e.clientX ?? e.touches?.[0]?.clientX;
+    if (!Number.isFinite(startX)) return;
+    const startWidth =
+      colWidthsRef.current[key] ??
+      DEFAULT_INSCRIPCIONES_COL_WIDTHS[key] ??
+      120;
+    startColumnResize({
+      key,
+      startX,
+      startWidth,
+      onChange: (k, next) => {
+        setColWidths((prev) => ({ ...prev, [k]: next }));
+      },
+      onEnd: () => {
+        saveColWidths(colWidthsRef.current);
+      },
+    });
+  };
+
+  const toggleMesSidebar = (mesValue) => {
+    const v = String(mesValue).padStart(2, '0');
+    setMes((prev) => {
+      const cur = asFilterArray(prev);
+      // Selección única: si ya está activo, vuelve a "todos"; si no, solo ese mes.
+      return cur.length === 1 && cur[0] === v ? [] : [v];
+    });
+    setPage(1);
+  };
+
+  const selectCursoSidebar = (cursoId) => {
+    const id = String(cursoId);
+    setIdCursoFiltro((prev) => {
+      const cur = asFilterArray(prev);
+      return cur.length === 1 && cur[0] === id ? [] : [id];
+    });
+    setPage(1);
+  };
 
   return (
     <div
-      className={`att-main att-main--wide att-admin-page att-gestion-page${
+      className={`att-main att-main--wide att-admin-page att-gestion-page att-gestion-page--fill${
         excludeTipo1 ? ' att-gestion-page--otros' : ''
       }`}
     >
@@ -2114,9 +2246,9 @@ export function GestionInscripcionesPage({
 
       <section className="att-admin-filters att-gestion-filters card border-0 shadow-sm mb-3">
         <div className="card-body py-2 py-md-3">
-          <div className="row g-2 align-items-end">
+          <div className="att-gestion-filters__bar">
             {excludeTipo1 ? (
-              <div className="col-12 col-sm-6 col-lg-3">
+              <div className="att-gestion-filters__field att-gestion-filters__field--tipo">
                 <label className="form-label small mb-1">Tipo</label>
                 <SearchableSelect
                   value={tipoSel}
@@ -2131,21 +2263,7 @@ export function GestionInscripcionesPage({
                 />
               </div>
             ) : null}
-            {!excludeTipo1 ? (
-              <div className="col-12 col-sm-6 col-md-4 col-lg-2">
-                <label className="form-label small mb-1">Mes</label>
-                <MultiSearchableSelect
-                  value={mes}
-                  onChange={(v) => {
-                    setMes(asFilterArray(v));
-                    setPage(1);
-                  }}
-                  options={mesOptions}
-                  placeholder="Todos los meses"
-                />
-              </div>
-            ) : null}
-            <div className="col-12 col-sm-6 col-md-4 col-lg-2">
+            <div className="att-gestion-filters__field att-gestion-filters__field--estado">
               <label className="form-label small mb-1">Estado</label>
               <MultiSearchableSelect
                 value={estado}
@@ -2157,19 +2275,17 @@ export function GestionInscripcionesPage({
                 placeholder="Todos"
               />
             </div>
-            <div className={`col-12 col-sm-8 col-md-6 ${excludeTipo1 ? 'col-lg-4' : 'col-lg-5'}`}>
+            <div className="att-gestion-filters__field att-gestion-filters__field--search">
               <label className="form-label small mb-1">Buscar</label>
-              <input
-                className="form-control form-control-sm"
+              <GestionSearchInput
                 placeholder="Participante, responsable, documento, curso…"
                 value={q}
                 onChange={(e) => {
                   setQ(e.target.value);
-                  setPage(1);
                 }}
               />
             </div>
-            <div className="col-12 col-sm-4 col-md-3 col-lg-3">
+            <div className="att-gestion-filters__field att-gestion-filters__field--more">
               <label className="form-label small mb-1 d-none d-sm-block">&nbsp;</label>
               <button
                 type="button"
@@ -2309,77 +2425,104 @@ export function GestionInscripcionesPage({
       {listQuery.isError ? <div className="alert alert-danger small">{listQuery.error?.message}</div> : null}
       </div>
 
-      <div className={`att-gestion-layout ${excludeTipo1 && effectiveTipo ? 'att-gestion-layout--with-sidebar' : ''}`}>
-        {excludeTipo1 && effectiveTipo ? (
+      <div className={`att-gestion-layout ${showSidebar ? 'att-gestion-layout--with-sidebar' : ''} ${!excludeTipo1 ? 'att-gestion-layout--meses' : 'att-gestion-layout--cursos'}`}>
+        {showSidebar ? (
           <aside className="att-gestion-course-panel card border-0 shadow-sm">
-            <div className="att-gestion-course-panel__head">Cursos del tipo</div>
-            <div className="att-gestion-course-panel__search">
-              <input
-                type="search"
-                className="form-control form-control-sm"
-                placeholder="Buscar curso…"
-                value={cursoSidebarQ}
-                onChange={(e) => setCursoSidebarQ(e.target.value)}
-                aria-label="Buscar curso en filtros rápidos"
-              />
-            </div>
-            <div className="att-gestion-course-panel__scroll">
-              <button
-                type="button"
-                className={`att-gestion-course-panel__item ${!asFilterArray(idCursoFiltro).length ? 'is-active' : ''}`}
-                onClick={() => {
-                  setIdCursoFiltro([]);
-                  setPage(1);
-                }}
-              >
-                <span className="att-gestion-course-panel__name">Todos los cursos</span>
-                <span className="att-gestion-course-panel__count">{cursosSidebarTotal}</span>
-              </button>
-              {cursosSidebarQuery.isPending && !cursosSidebarFromMeta.length ? (
-                <div className="text-center py-3">
-                  <div className="spinner-border spinner-border-sm text-primary" />
+            {!excludeTipo1 ? (
+              <>
+                <div className="att-gestion-course-panel__head">Mes</div>
+                <div className="att-gestion-course-panel__scroll">
+                  <button
+                    type="button"
+                    className={`att-gestion-course-panel__item ${!asFilterArray(mes).length ? 'is-active' : ''}`}
+                    onClick={() => {
+                      setMes([]);
+                      setPage(1);
+                    }}
+                  >
+                    <span className="att-gestion-course-panel__name">Todos</span>
+                  </button>
+                  {mesOptions.map((o) => {
+                    const selected = asFilterArray(mes).includes(String(o.value));
+                    return (
+                      <button
+                        key={o.value}
+                        type="button"
+                        className={`att-gestion-course-panel__item ${selected ? 'is-active' : ''}`}
+                        onClick={() => toggleMesSidebar(o.value)}
+                      >
+                        <span className="att-gestion-course-panel__name" title={o.label}>
+                          {o.shortLabel}
+                        </span>
+                        <span className="att-gestion-course-panel__count">{o.total}</span>
+                      </button>
+                    );
+                  })}
                 </div>
-              ) : null}
-              {cursosSidebarFiltered.map((c) => {
-                const selected = asFilterArray(idCursoFiltro).includes(String(c.id));
-                return (
-                <button
-                  key={c.id}
-                  type="button"
-                  className={`att-gestion-course-panel__item ${selected ? 'is-active' : ''}`}
-                  onClick={() => {
-                    const id = String(c.id);
-                    setIdCursoFiltro((prev) => {
-                      const cur = asFilterArray(prev);
-                      return cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id];
-                    });
-                    setPage(1);
-                  }}
-                  title={c.nombre}
-                >
-                  <span className="att-gestion-course-panel__name">{c.nombre || c.id}</span>
-                  <span className="att-gestion-course-panel__count">{Number(c.total || 0)}</span>
-                </button>
-              );
-              })}
-              {!cursosSidebarQuery.isPending &&
-              !metaQuery.isPending &&
-              cursosSidebarFromMeta.length === 0 ? (
-                <div className="small text-muted px-3 py-2">Sin cursos para este tipo</div>
-              ) : null}
-              {!cursosSidebarQuery.isPending &&
-              cursosSidebarFromMeta.length > 0 &&
-              cursosSidebarFiltered.length === 0 ? (
-                <div className="small text-muted px-3 py-2">Sin coincidencias</div>
-              ) : null}
-            </div>
+              </>
+            ) : (
+              <>
+                <div className="att-gestion-course-panel__head">Cursos</div>
+                <div className="att-gestion-course-panel__search">
+                  <GestionSearchInput
+                    placeholder="Buscar curso…"
+                    value={cursoSidebarQ}
+                    onChange={(e) => setCursoSidebarQ(e.target.value)}
+                    aria-label="Buscar curso en filtros rápidos"
+                  />
+                </div>
+                <div className="att-gestion-course-panel__scroll">
+                  <button
+                    type="button"
+                    className={`att-gestion-course-panel__item ${!asFilterArray(idCursoFiltro).length ? 'is-active' : ''}`}
+                    onClick={() => {
+                      setIdCursoFiltro([]);
+                      setPage(1);
+                    }}
+                  >
+                    <span className="att-gestion-course-panel__name">Todos</span>
+                    <span className="att-gestion-course-panel__count">{cursosSidebarTotal}</span>
+                  </button>
+                  {cursosSidebarQuery.isPending && !cursosSidebarFromMeta.length ? (
+                    <div className="text-center py-3">
+                      <div className="spinner-border spinner-border-sm text-primary" />
+                    </div>
+                  ) : null}
+                  {cursosSidebarFiltered.map((c) => {
+                    const selected = asFilterArray(idCursoFiltro).includes(String(c.id));
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        className={`att-gestion-course-panel__item ${selected ? 'is-active' : ''}`}
+                        onClick={() => selectCursoSidebar(c.id)}
+                        title={c.nombre}
+                      >
+                        <span className="att-gestion-course-panel__name">{c.nombre || c.id}</span>
+                        <span className="att-gestion-course-panel__count">{Number(c.total || 0)}</span>
+                      </button>
+                    );
+                  })}
+                  {!cursosSidebarQuery.isPending &&
+                  !metaQuery.isPending &&
+                  cursosSidebarFromMeta.length === 0 ? (
+                    <div className="small text-muted px-3 py-2">Sin cursos para este tipo</div>
+                  ) : null}
+                  {!cursosSidebarQuery.isPending &&
+                  cursosSidebarFromMeta.length > 0 &&
+                  cursosSidebarFiltered.length === 0 ? (
+                    <div className="small text-muted px-3 py-2">Sin coincidencias</div>
+                  ) : null}
+                </div>
+              </>
+            )}
           </aside>
         ) : null}
 
-      <div className="card border-0 shadow-sm att-gestion-table-card">
+      <div className={`card border-0 shadow-sm att-gestion-table-card${listQuery.isFetching ? ' is-fetching' : ''}`}>
         <div className="card-body p-0">
           <div className="table-responsive att-gestion-table-wrap att-admin-table-wrap--mobile-safe">
-            <table className="table table-sm table-hover mb-0 att-admin-table att-gestion-table">
+            <table className="table table-sm table-hover mb-0 att-admin-table att-gestion-table att-gestion-table--dense">
               <thead className="att-sortable-head">
                 <tr>
                   <SortableTh
@@ -2387,6 +2530,8 @@ export function GestionInscripcionesPage({
                     column="fecha"
                     sort={sort.sort}
                     dir={sort.dir}
+                    width={colWidths.fecha}
+                    onResizeStart={onColResizeStart}
                     onSort={(column) => {
                       setSort((current) => toggleColumnSort(current, column));
                       setPage(1);
@@ -2397,6 +2542,8 @@ export function GestionInscripcionesPage({
                     column="participante"
                     sort={sort.sort}
                     dir={sort.dir}
+                    width={colWidths.participante}
+                    onResizeStart={onColResizeStart}
                     onSort={(column) => {
                       setSort((current) => toggleColumnSort(current, column));
                       setPage(1);
@@ -2407,6 +2554,8 @@ export function GestionInscripcionesPage({
                     column="curso"
                     sort={sort.sort}
                     dir={sort.dir}
+                    width={colWidths.curso}
+                    onResizeStart={onColResizeStart}
                     onSort={(column) => {
                       setSort((current) => toggleColumnSort(current, column));
                       setPage(1);
@@ -2417,6 +2566,8 @@ export function GestionInscripcionesPage({
                     column="estado"
                     sort={sort.sort}
                     dir={sort.dir}
+                    width={colWidths.estado}
+                    onResizeStart={onColResizeStart}
                     onSort={(column) => {
                       setSort((current) => toggleColumnSort(current, column));
                       setPage(1);
@@ -2427,6 +2578,8 @@ export function GestionInscripcionesPage({
                     column="mes"
                     sort={sort.sort}
                     dir={sort.dir}
+                    width={colWidths.mes}
+                    onResizeStart={onColResizeStart}
                     onSort={(column) => {
                       setSort((current) => toggleColumnSort(current, column));
                       setPage(1);
@@ -2437,6 +2590,8 @@ export function GestionInscripcionesPage({
                     column="anio"
                     sort={sort.sort}
                     dir={sort.dir}
+                    width={colWidths.anio}
+                    onResizeStart={onColResizeStart}
                     onSort={(column) => {
                       setSort((current) => toggleColumnSort(current, column));
                       setPage(1);
@@ -2447,31 +2602,73 @@ export function GestionInscripcionesPage({
                     column="sede"
                     sort={sort.sort}
                     dir={sort.dir}
+                    width={colWidths.sede}
+                    onResizeStart={onColResizeStart}
                     onSort={(column) => {
                       setSort((current) => toggleColumnSort(current, column));
                       setPage(1);
                     }}
                   />
                   <SortableTh
-                    label="Transporte"
+                    label="Transp."
                     column="transporte"
                     sort={sort.sort}
                     dir={sort.dir}
+                    width={colWidths.transporte}
+                    onResizeStart={onColResizeStart}
                     onSort={(column) => {
                       setSort((current) => toggleColumnSort(current, column));
                       setPage(1);
                     }}
                   />
-                  {camposLista.map((c) => (
-                    <th key={c.campoKey} className="att-gestion-extra-col">
-                      {c.label}
-                    </th>
-                  ))}
+                  <th
+                    className="att-gestion-th-resizable"
+                    style={colStyle('observaciones')}
+                  >
+                    <span className="att-gestion-th-label">Obs.</span>
+                    <span
+                      className="att-gestion-col-resizer"
+                      role="separator"
+                      aria-orientation="vertical"
+                      aria-label="Redimensionar columna Observación"
+                      title="Arrastrar para cambiar el ancho"
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onColResizeStart('observaciones', e);
+                      }}
+                    />
+                  </th>
+                  {camposLista.map((c) => {
+                    const key = `extra_${c.campoKey}`;
+                    return (
+                      <th
+                        key={c.campoKey}
+                        className="att-gestion-extra-col att-gestion-th-resizable"
+                        style={colStyle(key)}
+                        title={c.label}
+                      >
+                        <span className="att-gestion-th-label">{c.label}</span>
+                        <span
+                          className="att-gestion-col-resizer"
+                          role="separator"
+                          aria-orientation="vertical"
+                          aria-label={`Redimensionar columna ${c.label}`}
+                          title="Arrastrar para cambiar el ancho"
+                          onPointerDown={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onColResizeStart(key, e);
+                          }}
+                        />
+                      </th>
+                    );
+                  })}
                   <th className="att-gestion-actions-col">Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {listQuery.isPending ? (
+                {listQuery.isPending && !listQuery.data ? (
                   <tr>
                     <td colSpan={tableColSpan} className="text-center py-4">
                       <div className="spinner-border spinner-border-sm text-primary" />
@@ -2485,34 +2682,54 @@ export function GestionInscripcionesPage({
                 ) : null}
                 {rows.map((row) => (
                   <tr key={row.id}>
-                    <td className="text-nowrap" data-label="Fecha">{formatFechaCorta(row.fechaInscripcion)}</td>
-                    <td data-label="Participante">
+                    <td className="text-nowrap" style={colStyle('fecha')} data-label="Fecha">
+                      {formatFechaCorta(row.fechaInscripcion)}
+                    </td>
+                    <td style={colStyle('participante')} data-label="Participante">
                       <div className="fw-semibold att-gestion-cell-clip">{row.nombreParticipante || '—'}</div>
-                      <div className="small text-muted">{row.documentoParticipante}</div>
+                      <div className="small text-muted att-gestion-cell-clip">{row.documentoParticipante}</div>
                     </td>
-                    <td data-label="Curso">
+                    <td style={colStyle('curso')} data-label="Curso">
                       <div className="att-gestion-cell-clip">{row.nombreCurso || row.idCurso}</div>
-                      <div className="small text-muted">{row.idCurso}</div>
+                      <div className="small text-muted att-gestion-cell-clip">{row.idCurso}</div>
                     </td>
-                    <td data-label="Estado">
+                    <td style={colStyle('estado')} data-label="Estado">
                       <span className="badge text-bg-light border">{row.estado}</span>
                     </td>
-                    <td className="text-nowrap" data-label="Mes">{MESES_LABEL[String(row.mes).padStart(2, '0')] || row.mes}</td>
-                    <td className="text-nowrap" data-label="Año">{row.año}</td>
-                    <td className="text-nowrap" data-label="Sede">{row.sede}</td>
-                    <td data-label="Transporte">{String(row.transporte || '').toUpperCase() === 'SI' ? 'Si' : 'No'}</td>
+                    <td className="text-nowrap" style={colStyle('mes')} data-label="Mes">
+                      {MESES_SHORT[String(row.mes).padStart(2, '0')] ||
+                        MESES_LABEL[String(row.mes).padStart(2, '0')] ||
+                        row.mes}
+                    </td>
+                    <td className="text-nowrap" style={colStyle('anio')} data-label="Año">
+                      {row.año}
+                    </td>
+                    <td className="text-nowrap" style={colStyle('sede')} data-label="Sede">
+                      {row.sede}
+                    </td>
+                    <td style={colStyle('transporte')} data-label="Transporte">
+                      {String(row.transporte || '').toUpperCase() === 'SI' ? 'Si' : 'No'}
+                    </td>
+                    <td
+                      className="att-gestion-cell-clip"
+                      style={colStyle('observaciones')}
+                      data-label="Observación"
+                      title={row.observaciones || ''}
+                    >
+                      {row.observaciones || '—'}
+                    </td>
                     {camposLista.map((c) => {
                       const found = (row.camposExtra || []).find((x) => x.campoKey === c.campoKey);
+                      const key = `extra_${c.campoKey}`;
                       return (
                         <td
                           key={c.campoKey}
-                          className="att-gestion-extra-col"
+                          className="att-gestion-extra-col att-gestion-cell-clip"
+                          style={colStyle(key)}
                           data-label={c.label}
                           title={displayCampoExtra(found)}
                         >
-                          <span className="att-gestion-cell-clip">
-                            {displayCampoExtra(found)}
-                          </span>
+                          {displayCampoExtra(found)}
                         </td>
                       );
                     })}
@@ -2667,7 +2884,11 @@ export function GestionInscripcionesPage({
         onClose={() => setFiltrosOpen(false)}
         eyebrow="Inscripciones"
         title="Filtros"
-        subtitle="Ajuste y pulse Aplicar. El mes, estado y búsqueda siguen en la barra principal."
+        subtitle={
+          excludeTipo1
+            ? 'Ajuste y pulse Aplicar. Tipo, estado y búsqueda siguen en la barra principal.'
+            : 'Ajuste y pulse Aplicar. Mes, estado y búsqueda siguen en la barra y el panel izquierdo.'
+        }
         width={420}
         footer={
           <div className="d-flex flex-wrap gap-2 justify-content-end w-100">
@@ -2732,10 +2953,13 @@ export function GestionInscripcionesPage({
             </div>
             <div className="mb-2">
               <label className="form-label small mb-1">Categoría</label>
-              <MultiSearchableSelect
-                value={asFilterArray(draftFiltros.idCursoFiltro)}
+              <SearchableSelect
+                value={asFilterArray(draftFiltros.idCursoFiltro)[0] || ''}
                 onChange={(v) =>
-                  setDraftFiltros((p) => ({ ...p, idCursoFiltro: asFilterArray(v) }))
+                  setDraftFiltros((p) => ({
+                    ...p,
+                    idCursoFiltro: v ? [String(v)] : [],
+                  }))
                 }
                 options={categoriaOptions.filter((o) => {
                   const draftActs = new Set(asFilterArray(draftFiltros.actividad).map(String));

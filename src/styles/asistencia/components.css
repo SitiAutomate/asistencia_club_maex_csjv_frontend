@@ -943,17 +943,17 @@
   }
 
   .att-layout {
-    --att-header-height: 3.2rem;
+    --att-header-height: 2.25rem;
   }
 
   .att-header {
-    padding: 0.5rem 0.65rem;
-    gap: 0.5rem;
+    padding: 0.18rem 0.5rem;
+    gap: 0.35rem;
   }
 
   .att-header__menu {
-    width: 2.2rem;
-    height: 2.2rem;
+    width: 1.75rem;
+    height: 1.75rem;
   }
 
   .att-header__logos {
@@ -961,7 +961,7 @@
   }
 
   .att-header__title {
-    font-size: 0.98rem;
+    font-size: 0.8rem;
   }
 
   .att-course-dropdown {
@@ -1084,10 +1084,10 @@
   }
 
   .att-layout {
-    --att-header-height: 3rem;
+    --att-header-height: 2.15rem;
   }
 
   .att-header__title {
-    font-size: 0.95rem;
+    font-size: 0.78rem;
   }
 }

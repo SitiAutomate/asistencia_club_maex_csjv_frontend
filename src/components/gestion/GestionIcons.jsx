@@ -136,6 +136,16 @@ export function IconFilters({ size = 16 }) {
   );
 }
 
+/** Lupa para campos de búsqueda. */
+export function IconSearch({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M16.2 16.2 20 20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 /** Balón de fútbol para navegación de cursos. */
 export function IconBall({ size = 16 }) {
   return (

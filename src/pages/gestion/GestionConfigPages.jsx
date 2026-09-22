@@ -7,8 +7,10 @@ import { getDefaultAppPath, isAdminLike, isNavKeyEnabled, isSuperAdmin } from '.
 import { formatFechaHora } from '../../lib/formatDate.js';
 import { humanizeLabel } from '../../lib/gestionFormat.js';
 import { GestionNav } from '../../components/gestion/GestionNav.jsx';
+import { GestionFab } from '../../components/gestion/GestionFab.jsx';
 import { GestionPanel, GestionPanelModeToggle } from '../../components/gestion/GestionPanel.jsx';
 import { SearchableSelect } from '../../components/gestion/SearchableSelect.jsx';
+import { GestionSearchInput } from '../../components/gestion/GestionSearchInput.jsx';
 import { AttToast, useAttToast } from '../../components/AttToast.jsx';
 
 const LABEL_CAMPO = {
@@ -219,8 +221,7 @@ export function GestionAuditoriaPage() {
       </p>
       <div className="row g-2 mb-3">
         <div className="col-12 col-sm-6 col-md-4">
-          <input
-            className="form-control form-control-sm"
+          <GestionSearchInput
             placeholder="Buscar email, resumen, acción…"
             value={q}
             onChange={(e) => {
@@ -692,30 +693,6 @@ export function GestionTipoCamposPage() {
   return (
     <div className="att-main att-main--wide att-admin-page att-gestion-page">
       <div className="att-gestion-page__toolbar">
-        <div className="d-flex flex-wrap align-items-center gap-2">
-          <button
-            type="button"
-            className="btn btn-primary btn-sm"
-            onClick={() =>
-              setEditing({
-                campoKey: '',
-                columnaDb: '',
-                label: '',
-                tipoInput: 'text',
-                catalogo: '',
-                idCurso: idCurso || '',
-                visibleLista: false,
-                visibleDetalle: true,
-                visibleForm: true,
-                requerido: false,
-                orden: rows.length * 10,
-                activo: true,
-              })
-            }
-          >
-            Nuevo campo
-          </button>
-        </div>
         <div className="att-gestion-page__actions">
           <GestionPanelModeToggle />
           <GestionNav />
@@ -957,6 +934,27 @@ export function GestionTipoCamposPage() {
           </table>
         </div>
       </div>
+
+      <GestionFab
+        canCreate
+        newTitle="Nuevo campo"
+        onNew={() =>
+          setEditing({
+            campoKey: '',
+            columnaDb: '',
+            label: '',
+            tipoInput: 'text',
+            catalogo: '',
+            idCurso: idCurso || '',
+            visibleLista: false,
+            visibleDetalle: true,
+            visibleForm: true,
+            requerido: false,
+            orden: rows.length * 10,
+            activo: true,
+          })
+        }
+      />
     </div>
   );
 }

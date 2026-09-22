@@ -67,6 +67,34 @@
   background: #eef4fb;
 }
 
+/* Buscador con lupa (barra principal y dropdowns) */
+.att-gestion-search {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.att-gestion-search__icon {
+  position: absolute;
+  top: 50%;
+  left: 0.55rem;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.att-gestion-search__input {
+  padding-left: 1.85rem !important;
+}
+
+.att-search-select__dropdown .att-gestion-search {
+  margin-bottom: 0.5rem;
+}
+
 /* Contención: la página no debe crecer en X; el scroll queda en la tabla */
 .att-gestion-page,
 .att-admin-page {
@@ -101,21 +129,29 @@
   background: #f8fafc;
   white-space: nowrap;
   vertical-align: middle;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
   color: #334155;
   border-bottom: 1px solid #dbe3ea;
-  padding: 0.55rem 0.6rem;
+  padding: 0.28rem 0.4rem;
+  position: relative;
 }
 
 .att-gestion-table tbody td {
   vertical-align: middle;
-  padding: 0.5rem 0.6rem;
-  font-size: 0.84rem;
+  padding: 0.28rem 0.4rem;
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+
+.att-gestion-table--dense {
+  table-layout: fixed;
+  width: max-content;
+  min-width: 100%;
 }
 
 .att-gestion-cell-clip {
-  max-width: 14rem;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -124,10 +160,66 @@
 /* Nunca cambiar display de un <td>: rompe el layout de la tabla */
 td.att-gestion-cell-clip {
   display: table-cell;
-  max-width: 14rem;
+  max-width: none;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.att-gestion-th-resizable {
+  position: relative;
+}
+
+.att-gestion-th-label {
+  display: inline-block;
+  max-width: calc(100% - 0.35rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+.att-gestion-col-resizer {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  z-index: 3;
+  width: 8px;
+  height: 100%;
+  cursor: col-resize;
+  user-select: none;
+  touch-action: none;
+}
+
+.att-gestion-col-resizer::after {
+  content: '';
+  position: absolute;
+  top: 18%;
+  bottom: 18%;
+  left: 3px;
+  width: 2px;
+  border-radius: 1px;
+  background: transparent;
+  transition: background-color 0.12s ease;
+}
+
+.att-gestion-th-resizable:hover .att-gestion-col-resizer::after,
+.att-gestion-col-resizer:hover::after {
+  background: #94a3b8;
+}
+
+body.att-col-resizing {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+body.att-col-resizing iframe {
+  pointer-events: none;
+}
+
+.att-gestion-table .att-sort-th {
+  max-width: 100%;
+  padding: 0;
+  font-size: inherit;
 }
 
 .att-gestion-actions-col {
@@ -149,20 +241,13 @@ td.att-gestion-cell-clip {
 .att-gestion-table tbody td.att-gestion-extra-col,
 .att-gestion-table thead th.att-gestion-extra-col {
   white-space: nowrap;
-  min-width: 6rem;
-  max-width: 11rem;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.att-gestion-table tbody td.att-gestion-extra-col .att-gestion-cell-clip {
-  display: block;
-  max-width: 100%;
-}
-
 .att-gestion-toolbar {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0.5rem;
   align-items: center;
   max-width: 100%;
@@ -170,34 +255,42 @@ td.att-gestion-cell-clip {
 
 .att-gestion-nav {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.55rem;
+  gap: 0.35rem;
   max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .att-gestion-nav__links {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.2rem;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
 }
 
 .att-gestion-nav__link {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.35rem;
-  min-height: 2rem;
-  padding: 0.28rem 0.7rem;
+  gap: 0.25rem;
+  flex: 0 0 auto;
+  min-height: 1.7rem;
+  padding: 0.15rem 0.45rem;
   border: 1px solid #d0dae6;
-  border-radius: 0.4rem;
+  border-radius: 0.3rem;
   background: #fff;
   color: #334155;
-  font-size: 0.8125rem;
+  font-size: 0.72rem;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.15;
   text-decoration: none;
   white-space: nowrap;
   box-sizing: border-box;
@@ -227,41 +320,123 @@ td.att-gestion-cell-clip {
 
 .att-gestion-nav__extra {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 0.35rem;
   padding-left: 0.55rem;
   margin-left: 0.1rem;
   border-left: 1px solid #dbe3ea;
-  min-height: 2rem;
+  min-height: 1.7rem;
 }
 
 .att-gestion-page__toolbar {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.65rem 1rem;
-  margin-bottom: 0.85rem;
+  gap: 0.35rem;
+  margin-bottom: 0.3rem;
   max-width: 100%;
   min-width: 0;
+  overflow: hidden;
+}
+
+.att-main.att-gestion-page {
+  padding: 0.45rem 0.55rem 0.55rem;
+}
+
+.att-gestion-filters.card {
+  margin-bottom: 0.4rem !important;
+}
+
+.att-gestion-filters .card-body {
+  padding-top: 0.4rem !important;
+  padding-bottom: 0.4rem !important;
+}
+
+.att-gestion-filters__bar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  gap: 0.45rem;
+  min-width: 0;
+  width: 100%;
+}
+
+.att-gestion-filters__field {
+  min-width: 0;
+}
+
+.att-gestion-filters__field--tipo {
+  flex: 0 1 12rem;
+  max-width: 14rem;
+}
+
+.att-gestion-filters__field--estado {
+  flex: 0 1 9.5rem;
+  max-width: 11rem;
+}
+
+.att-gestion-filters__field--search {
+  flex: 1 1 auto;
+  min-width: 10rem;
+}
+
+.att-gestion-filters__field--more {
+  flex: 0 0 8.75rem;
+  width: 8.75rem;
+}
+
+.att-gestion-filters__field--more .att-gestion-filters-btn {
+  width: 100%;
+  min-height: 1.9rem;
+  padding: 0.2rem 0.45rem 0.2rem 0.3rem;
+  gap: 0.35rem;
+}
+
+.att-gestion-filters__field--more .att-gestion-filters-btn__hint {
+  display: none !important;
+}
+
+@media (max-width: 767.98px) {
+  .att-gestion-filters__bar {
+    flex-wrap: wrap;
+  }
+
+  .att-gestion-filters__field--tipo,
+  .att-gestion-filters__field--estado,
+  .att-gestion-filters__field--search,
+  .att-gestion-filters__field--more {
+    flex: 1 1 calc(50% - 0.3rem);
+    max-width: none;
+    width: auto;
+  }
+
+  .att-gestion-filters__field--search {
+    flex: 1 1 100%;
+  }
 }
 
 .att-gestion-page__actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.55rem;
+  gap: 0.35rem;
   max-width: 100%;
   min-width: 0;
   margin-left: auto;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
 }
 
 /* Separador visual entre chips de acción y tabs de módulos */
 .att-gestion-page__actions > .att-gestion-nav {
-  padding-left: 0.55rem;
-  margin-left: 0.15rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-left: 0.45rem;
+  margin-left: 0.1rem;
   border-left: 1px solid #dbe3ea;
 }
 
@@ -269,38 +444,35 @@ td.att-gestion-cell-clip {
 .att-gestion-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
-  min-height: 2.55rem;
-  padding: 0.28rem 0.75rem 0.28rem 0.4rem;
+  gap: 0.35rem;
+  min-height: 1.7rem;
+  padding: 0.12rem 0.45rem 0.12rem 0.25rem;
   border: 1px solid #d0dae6;
-  border-radius: 0.7rem;
-  background: linear-gradient(180deg, #ffffff 0%, #f7fafc 100%);
+  border-radius: 0.35rem;
+  background: #fff;
   color: #0f2747;
-  box-shadow: 0 1px 2px rgba(15, 39, 71, 0.04);
+  box-shadow: none;
   cursor: pointer;
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.15s ease,
-    border-color 0.15s ease,
-    background 0.15s ease;
+  flex: 0 0 auto;
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
 
 .att-gestion-chip:hover {
-  transform: translateY(-1px);
+  transform: none;
   border-color: #b8c7d9;
-  background: #fff;
-  box-shadow: 0 8px 18px rgba(15, 39, 71, 0.1);
+  background: #f4f8fc;
+  box-shadow: none;
 }
 
 .att-gestion-chip:active {
-  transform: translateY(0);
-  box-shadow: 0 1px 2px rgba(15, 39, 71, 0.06);
+  transform: none;
+  box-shadow: none;
 }
 
 .att-gestion-chip__icon {
-  width: 1.85rem;
-  height: 1.85rem;
-  border-radius: 0.5rem;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 0.3rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -313,36 +485,34 @@ td.att-gestion-cell-clip {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.05rem;
+  gap: 0;
   min-width: 0;
-  line-height: 1.15;
+  line-height: 1.1;
 }
 
 .att-gestion-chip__label {
-  font-size: 0.8125rem;
+  font-size: 0.72rem;
   font-weight: 700;
   color: #0f2747;
 }
 
 .att-gestion-chip__hint {
-  font-size: 0.68rem;
-  font-weight: 500;
-  color: #64748b;
-  white-space: nowrap;
+  display: none;
 }
 
 /* Acción: pasar mes (SuperAdmin) — estilo simple */
 .att-pase-mes {
   display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
-  min-height: 2.55rem;
-  padding: 0.28rem 0.75rem 0.28rem 0.4rem;
+  gap: 0.35rem;
+  min-height: 1.7rem;
+  padding: 0.12rem 0.45rem 0.12rem 0.25rem;
   border: 1px solid #d0dae6;
-  border-radius: 0.7rem;
+  border-radius: 0.35rem;
   background: #fff;
   color: #0f2747;
   cursor: pointer;
+  flex: 0 0 auto;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 
@@ -358,9 +528,9 @@ td.att-gestion-cell-clip {
 }
 
 .att-pase-mes__icon {
-  width: 1.85rem;
-  height: 1.85rem;
-  border-radius: 0.5rem;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 0.3rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -373,26 +543,20 @@ td.att-gestion-cell-clip {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.05rem;
+  gap: 0;
   min-width: 0;
   text-align: left;
-  line-height: 1.15;
+  line-height: 1.1;
 }
 
 .att-pase-mes__label {
-  font-size: 0.8125rem;
+  font-size: 0.72rem;
   font-weight: 700;
   color: #0f2747;
 }
 
 .att-pase-mes__meta {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.28rem;
-  font-size: 0.68rem;
-  font-weight: 500;
-  color: #64748b;
-  white-space: nowrap;
+  display: none;
 }
 
 .att-pase-mes__arrow {
@@ -855,25 +1019,27 @@ td.att-gestion-cell-clip {
   min-height: 0;
 }
 
-.att-main.att-gestion-page--otros {
+.att-main.att-gestion-page--otros,
+.att-main.att-gestion-page--fill {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  height: calc(100dvh - var(--att-header-height, 3.6rem));
-  max-height: calc(100dvh - var(--att-header-height, 3.6rem));
+  height: calc(100dvh - var(--att-header-height, 2.75rem));
+  max-height: calc(100dvh - var(--att-header-height, 2.75rem));
   overflow: hidden;
   box-sizing: border-box;
-  /* El FAB flota encima; no reservar hueco que deje la tabla corta */
   padding-bottom: 0.75rem !important;
   margin-bottom: 0;
 }
 
-.att-gestion-page--otros > .att-gestion-page__top {
+.att-gestion-page--otros > .att-gestion-page__top,
+.att-gestion-page--fill > .att-gestion-page__top {
   flex: 0 0 auto;
 }
 
-.att-gestion-page--otros > .att-gestion-layout {
+.att-gestion-page--otros > .att-gestion-layout,
+.att-gestion-page--fill > .att-gestion-layout {
   flex: 1 1 auto;
   min-height: 0;
 }
@@ -885,16 +1051,25 @@ td.att-gestion-cell-clip {
 
 .att-gestion-layout--with-sidebar {
   display: grid;
-  grid-template-columns: minmax(210px, 270px) minmax(0, 1fr);
-  gap: 0.85rem;
+  grid-template-columns: 7.25rem minmax(0, 1fr);
+  gap: 0.5rem;
   align-items: stretch;
   overflow: hidden;
   height: 100%;
   min-height: 0;
 }
 
+.att-gestion-layout--with-sidebar.att-gestion-layout--meses {
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+}
+
+.att-gestion-layout--with-sidebar.att-gestion-layout--cursos {
+  grid-template-columns: minmax(9rem, 11rem) minmax(0, 1fr);
+}
+
 @media (max-width: 991px) {
-  .att-main.att-gestion-page--otros {
+  .att-main.att-gestion-page--otros,
+  .att-main.att-gestion-page--fill {
     height: auto;
     max-height: none;
     overflow-x: clip;
@@ -917,55 +1092,86 @@ td.att-gestion-cell-clip {
   height: 100%;
   overflow: hidden;
   padding: 0;
+  background: #fff;
+  border: 1px solid #e8eef4;
+  border-radius: 0.5rem;
+}
+
+.att-gestion-course-panel.card {
+  background: #fff;
+}
+
+.att-gestion-table-card.is-fetching {
+  position: relative;
+}
+
+.att-gestion-table-card.is-fetching::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--bs-primary, #3d8dd4), transparent);
+  background-size: 40% 100%;
+  animation: att-gestion-fetch-bar 0.9s linear infinite;
+  pointer-events: none;
+  z-index: 3;
+}
+
+@keyframes att-gestion-fetch-bar {
+  0% {
+    background-position: -40% 0;
+  }
+  100% {
+    background-position: 140% 0;
+  }
 }
 
 .att-gestion-course-panel__head {
   flex: 0 0 auto;
-  padding: 0.75rem 1rem 0.55rem;
-  font-size: 0.72rem;
+  padding: 0.45rem 0.5rem 0.3rem;
+  font-size: 0.65rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #64748b;
-  border-bottom: 1px solid #e8eef4;
 }
 
 .att-gestion-course-panel__search {
-  flex: 0 0 auto;
-  padding: 0.55rem 0.75rem 0.45rem;
-  border-bottom: 1px solid #e8eef4;
+  padding: 0 0.4rem 0.35rem;
 }
 
 .att-gestion-course-panel__search .form-control {
-  font-size: 0.8rem;
+  font-size: 0.72rem;
 }
 
 .att-gestion-course-panel__scroll {
   flex: 1 1 auto;
   min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 0.35rem 0 0.65rem;
-  -webkit-overflow-scrolling: touch;
+  padding: 0 0.2rem 0.4rem;
 }
 
 .att-gestion-course-panel__item {
   display: flex;
-  flex-direction: row;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 0.55rem;
+  gap: 0.25rem;
   width: 100%;
   border: 0;
+  border-left: 2px solid transparent;
+  border-radius: 0;
   background: transparent;
+  color: #334155;
   text-align: left;
-  padding: 0.55rem 1rem;
-  color: #0f2747;
-  border-left: 3px solid transparent;
+  padding: 0.28rem 0.4rem;
+  cursor: pointer;
 }
 
 .att-gestion-course-panel__item:hover {
-  background: #f8fafc;
+  background: #f1f5f9;
 }
 
 .att-gestion-course-panel__item.is-active {
@@ -974,20 +1180,24 @@ td.att-gestion-cell-clip {
 }
 
 .att-gestion-course-panel__name {
-  font-size: 0.84rem;
+  font-size: 0.74rem;
   font-weight: 600;
-  line-height: 1.3;
+  line-height: 1.2;
   min-width: 0;
+  flex: 1 1 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .att-gestion-course-panel__count {
   flex: 0 0 auto;
-  min-width: 1.6rem;
-  padding: 0.12rem 0.45rem;
+  min-width: 1.25rem;
+  padding: 0.05rem 0.28rem;
   border-radius: 999px;
   background: #e8eef4;
   color: #334155;
-  font-size: 0.72rem;
+  font-size: 0.62rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   text-align: center;
@@ -1509,28 +1719,32 @@ td.att-gestion-cell-clip {
 
 @media (max-width: 991.98px) {
   .att-gestion-page__toolbar {
-    align-items: stretch;
-    margin-bottom: 0.85rem;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    overflow-x: auto;
   }
 
   .att-gestion-page__actions {
     justify-content: flex-start;
-    width: 100%;
-    max-width: 100%;
+    width: max-content;
+    max-width: none;
+    min-width: 100%;
     margin-left: 0;
+    flex-wrap: nowrap;
   }
 
   .att-gestion-page__actions > .att-gestion-nav {
-    width: 100%;
-    padding-left: 0;
-    margin-left: 0;
-    border-left: none;
-    margin-top: 0.15rem;
+    width: auto;
+    flex: 0 0 auto;
+    padding-left: 0.45rem;
+    margin-left: 0.1rem;
+    border-left: 1px solid #dbe3ea;
+    margin-top: 0;
   }
 
   .att-gestion-nav {
-    width: 100%;
-    max-width: 100%;
+    width: auto;
+    max-width: none;
     justify-content: flex-start;
     overflow: visible;
   }
@@ -1538,19 +1752,14 @@ td.att-gestion-cell-clip {
   .att-gestion-nav__links {
     display: flex;
     flex-wrap: nowrap;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
-    gap: 0.4rem;
-    padding: 0.15rem 0.15rem 0.35rem;
-    max-width: 100%;
-    scroll-padding-inline: 0.5rem;
+    overflow-x: visible;
+    gap: 0.2rem;
+    padding: 0;
+    max-width: none;
   }
 
   .att-gestion-nav__links::after {
-    content: '';
-    flex: 0 0 1.25rem;
+    display: none;
   }
 
   .att-gestion-nav__link {
@@ -1559,9 +1768,9 @@ td.att-gestion-cell-clip {
 
   .att-gestion-chip,
   .att-pase-mes {
-    flex: 1 1 calc(50% - 0.3rem);
+    flex: 0 0 auto;
     min-width: 0;
-    max-width: 100%;
+    max-width: none;
   }
 
   .att-gestion-chip__hint {
@@ -1612,7 +1821,7 @@ td.att-gestion-cell-clip {
   }
 
   .att-gestion-course-panel__name {
-    max-width: 9.5rem;
+    max-width: 12rem;
   }
 
   /* Nunca 100vw: en móvil ensancha el documento y mueve toda la pantalla */

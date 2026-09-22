@@ -1,11 +1,31 @@
 /**
- * Encabezado ordenable. El padre aplica el orden (servidor o cliente).
+ * Encabezado ordenable con asa de redimensionado (arrastrar borde derecho).
  */
-export function SortableTh({ label, column, sort, dir, onSort, className }) {
+export function SortableTh({
+  label,
+  column,
+  sort,
+  dir,
+  onSort,
+  className,
+  style,
+  width,
+  onResizeStart,
+  resizable = true,
+}) {
   const active = sort === column;
   const nextDir = active && dir === 'asc' ? 'desc' : 'asc';
+  const mergedStyle =
+    width != null
+      ? { ...style, width, minWidth: width, maxWidth: width }
+      : style;
+
   return (
-    <th className={className} aria-sort={active ? (dir === 'desc' ? 'descending' : 'ascending') : 'none'}>
+    <th
+      className={['att-gestion-th-resizable', className].filter(Boolean).join(' ') || undefined}
+      style={mergedStyle}
+      aria-sort={active ? (dir === 'desc' ? 'descending' : 'ascending') : 'none'}
+    >
       <button
         type="button"
         className={`att-sort-th ${active ? 'is-active' : ''}`}
@@ -17,6 +37,20 @@ export function SortableTh({ label, column, sort, dir, onSort, className }) {
           {active ? (dir === 'desc' ? '↓' : '↑') : '↕'}
         </span>
       </button>
+      {resizable && onResizeStart ? (
+        <span
+          className="att-gestion-col-resizer"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label={`Redimensionar columna ${label}`}
+          title="Arrastrar para cambiar el ancho"
+          onPointerDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onResizeStart(column, e);
+          }}
+        />
+      ) : null}
     </th>
   );
 }

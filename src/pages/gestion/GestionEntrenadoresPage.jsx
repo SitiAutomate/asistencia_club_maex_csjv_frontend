@@ -12,6 +12,7 @@ import { GestionFab } from '../../components/gestion/GestionFab.jsx';
 import { SortableTh, toggleColumnSort } from '../../components/gestion/SortableTh.jsx';
 import { DrawerField, DrawerSection } from '../../components/gestion/SlideDrawer.jsx';
 import { GestionPanel, GestionPanelModeToggle } from '../../components/gestion/GestionPanel.jsx';
+import { GestionSearchInput } from '../../components/gestion/GestionSearchInput.jsx';
 import { AttToast, useAttToast } from '../../components/AttToast.jsx';
 
 function emptyAsignacionRow() {
@@ -333,8 +334,7 @@ export function GestionEntrenadoresPage() {
         </div>
       </div>
       <div className="mb-3">
-        <input
-          className="form-control form-control-sm"
+        <GestionSearchInput
           style={{ maxWidth: '100%', width: '100%' }}
           placeholder="Buscar por ID, nombre o correo…"
           value={q}
