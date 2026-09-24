@@ -6,7 +6,7 @@ import { queryClient } from '../../lib/queryClient.js';
 import { getDefaultAppPath, isAdminLike, isNavKeyEnabled, isSuperAdmin } from '../../lib/navFeatures.js';
 import { canGestion, useGestionPermisos } from '../../lib/useGestionPermisos.js';
 import { formatFechaCorta, toDateInput } from '../../lib/formatDate.js';
-import { anioMesBogotaClient, isPeriodoInscripcionPermitidoClient, periodosInscripcionPermitidosClient, fechaHoyBogotaClient } from '../../lib/gestionHelpers.js';
+import { anioMesBogotaClient, periodosInscripcionPermitidosClient, fechaHoyBogotaClient } from '../../lib/gestionHelpers.js';
 import { loadGestionFilters, saveGestionFilters } from '../../lib/gestionFiltersStorage.js';
 import {
   DEFAULT_INSCRIPCIONES_COL_WIDTHS,
@@ -509,20 +509,19 @@ function InscripcionFormModal({
       }));
   }, [cursosQuery.data, form.sede]);
 
-  const mesFormOptions = useMemo(() => {
-    if (!isNueva) {
-      return Object.entries(MESES_LABEL).map(([v, l]) => ({ value: v, label: l }));
-    }
-    const allowed = periodosInscripcionPermitidosClient();
-    const meses = [...new Set(allowed.map((p) => p.mes))];
-    return meses.map((v) => ({ value: v, label: MESES_LABEL[v] || v }));
-  }, [isNueva]);
+  const mesFormOptions = useMemo(
+    () => Object.entries(MESES_LABEL).map(([v, l]) => ({ value: v, label: l })),
+    [],
+  );
 
   const anioFormOptions = useMemo(() => {
     if (!isNueva) return anioOptions;
-    const allowed = periodosInscripcionPermitidosClient();
-    const years = [...new Set(allowed.map((p) => String(p.anio)))];
-    return years.map((y) => ({ value: y, label: y }));
+    const base = anioMesBogotaClient().anio;
+    const set = new Set(anioOptions.map((o) => String(o.value)));
+    for (let y = base - 3; y <= base + 1; y += 1) set.add(String(y));
+    return [...set]
+      .sort((a, b) => Number(b) - Number(a))
+      .map((y) => ({ value: y, label: y }));
   }, [isNueva, anioOptions]);
 
   const estadoFormOptions = useMemo(
@@ -537,10 +536,8 @@ function InscripcionFormModal({
         if (!form.causalRetiro) throw new Error('Seleccione la causal de retiro');
         if (!form.fechaRetiro) throw new Error('La fecha de retiro es obligatoria');
       }
-      if (isNueva && !isPeriodoInscripcionPermitidoClient(form.anio, form.mes)) {
-        throw new Error(
-          'Solo se pueden crear inscripciones para el mes actual o el siguiente',
-        );
+      if (!form.mes || !/^\d{4}$/.test(String(form.anio || ''))) {
+        throw new Error('Seleccione mes y año válidos');
       }
       const extras = { ...(form.camposExtra || {}) };
       let observaciones = form.observaciones;
@@ -606,17 +603,7 @@ function InscripcionFormModal({
       open={open}
       onClose={onClose}
       title={title}
-      subtitle={
-        isNueva
-          ? `Solo mes actual o siguiente${
-              periodosInscripcionPermitidosClient().some(
-                (p) => p.mes === '01' && p.anio !== anioMesBogotaClient().anio,
-              )
-                ? ' (en diciembre incluye enero del año siguiente)'
-                : ''
-            }.`
-          : undefined
-      }
+      subtitle={isNueva ? 'Puede inscribir en cualquier mes y año.' : undefined}
       width={560}
       className="att-form-modal"
       footer={formFooter}
@@ -699,15 +686,7 @@ function InscripcionFormModal({
                 <label className="form-label small">Mes</label>
                 <SearchableSelect
                   value={form.mes}
-                  onChange={(v) => {
-                    const allowed = periodosInscripcionPermitidosClient();
-                    const match = allowed.find((p) => p.mes === v);
-                    setForm((p) => ({
-                      ...p,
-                      mes: v,
-                      ...(isNueva && match ? { anio: String(match.anio) } : {}),
-                    }));
-                  }}
+                  onChange={(v) => setForm((p) => ({ ...p, mes: v }))}
                   options={mesFormOptions}
                   allowClear={false}
                 />
@@ -719,7 +698,6 @@ function InscripcionFormModal({
                   onChange={(v) => setForm((p) => ({ ...p, anio: v }))}
                   options={anioFormOptions}
                   allowClear={false}
-                  disabled={isNueva && anioFormOptions.length <= 1}
                 />
               </div>
               <div className="col-md-4">
@@ -913,21 +891,19 @@ function DuplicarInscripcionModal({ source, anioOptions, onClose, onSaved }) {
   const isRetirado = estado === 'RETIRADO';
   const causalesOptions = useCausalesOptions(Boolean(source));
 
-  const mesOptions = useMemo(() => {
-    const allowed = periodosInscripcionPermitidosClient();
-    return [...new Set(allowed.map((p) => p.mes))].map((v) => ({
-      value: v,
-      label: MESES_LABEL[v] || v,
-    }));
-  }, []);
+  const mesOptions = useMemo(
+    () => Object.entries(MESES_LABEL).map(([v, l]) => ({ value: v, label: l })),
+    [],
+  );
 
   const anioDupOptions = useMemo(() => {
-    const allowed = periodosInscripcionPermitidosClient();
-    return [...new Set(allowed.map((p) => String(p.anio)))].map((y) => ({
-      value: y,
-      label: y,
-    }));
-  }, []);
+    const base = anioMesBogotaClient().anio;
+    const set = new Set((anioOptions || []).map((o) => String(o.value)));
+    for (let y = base - 3; y <= base + 1; y += 1) set.add(String(y));
+    return [...set]
+      .sort((a, b) => Number(b) - Number(a))
+      .map((y) => ({ value: y, label: y }));
+  }, [anioOptions]);
 
   const mut = useMutation({
     mutationFn: async () => {
@@ -935,8 +911,8 @@ function DuplicarInscripcionModal({ source, anioOptions, onClose, onSaved }) {
         if (!causalRetiro) throw new Error('Seleccione la causal de retiro');
         if (!fechaRetiro) throw new Error('La fecha de retiro es obligatoria');
       }
-      if (!isPeriodoInscripcionPermitidoClient(anio, mes)) {
-        throw new Error('Solo se pueden crear inscripciones para el mes actual o el siguiente');
+      if (!mes || !/^\d{4}$/.test(String(anio || ''))) {
+        throw new Error('Seleccione mes y año válidos');
       }
       return postJson('/api/gestion/inscripciones', {
         tipo: source.tipo,
@@ -1001,11 +977,7 @@ function DuplicarInscripcionModal({ source, anioOptions, onClose, onSaved }) {
           <label className="form-label small">Mes</label>
           <SearchableSelect
             value={mes}
-            onChange={(v) => {
-              setMes(v);
-              const match = periodosInscripcionPermitidosClient().find((p) => p.mes === v);
-              if (match) setAnio(String(match.anio));
-            }}
+            onChange={setMes}
             options={mesOptions}
             allowClear={false}
           />
@@ -1484,8 +1456,7 @@ export function GestionInscripcionesPage({
   const [anio, setAnio] = useState(String(initialFilters.anio || now.anio));
   const [mes, setMes] = useState(() => {
     if (excludeTipo1) return [];
-    const arr = asFilterArray(initialFilters.mes?.length ? initialFilters.mes : now.mes);
-    return arr.slice(0, 1);
+    return asFilterArray(initialFilters.mes?.length ? initialFilters.mes : now.mes);
   });
   const [estado, setEstado] = useState(() => asFilterArray(initialFilters.estado));
   const [sede, setSede] = useState(() => asFilterArray(initialFilters.sede));
@@ -2186,8 +2157,8 @@ export function GestionInscripcionesPage({
     const v = String(mesValue).padStart(2, '0');
     setMes((prev) => {
       const cur = asFilterArray(prev);
-      // Selección única: si ya está activo, vuelve a "todos"; si no, solo ese mes.
-      return cur.length === 1 && cur[0] === v ? [] : [v];
+      // Multiselección: clic agrega o quita sin reemplazar los demás.
+      return cur.includes(v) ? cur.filter((m) => m !== v) : [...cur, v];
     });
     setPage(1);
   };
