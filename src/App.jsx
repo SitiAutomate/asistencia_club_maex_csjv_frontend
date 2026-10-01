@@ -31,6 +31,7 @@ import {
   GestionCursosCatalogPage,
 } from './pages/gestion/GestionCatalogPages.jsx';
 import { GestionEntrenadoresPage } from './pages/gestion/GestionEntrenadoresPage.jsx';
+import { GestionRecomendacionesPage } from './pages/gestion/GestionRecomendacionesPage.jsx';
 import {
   GestionAuditoriaPage,
   GestionPermisosPage,
@@ -105,6 +106,16 @@ export default function App() {
                 <RequireNavView navKey="gestion">
                   <RequireGestionModulo modulo="cursos">
                     <GestionCursosCatalogPage />
+                  </RequireGestionModulo>
+                </RequireNavView>
+              }
+            />
+            <Route
+              path="gestion/recomendaciones"
+              element={
+                <RequireNavView navKey="gestion">
+                  <RequireGestionModulo modulo="recomendaciones">
+                    <GestionRecomendacionesPage />
                   </RequireGestionModulo>
                 </RequireNavView>
               }

@@ -81,18 +81,18 @@ export function SlideDrawer({
   );
 }
 
-export function DrawerSection({ title, children }) {
+export function DrawerSection({ title, children, columns = false }) {
   return (
     <section className="att-drawer-section">
-      <h6 className="att-drawer-section__title">{title}</h6>
-      {children}
+      {title ? <h6 className="att-drawer-section__title">{title}</h6> : null}
+      {columns ? <div className="att-drawer-grid">{children}</div> : children}
     </section>
   );
 }
 
-export function DrawerField({ label, children }) {
+export function DrawerField({ label, children, full = false }) {
   return (
-    <div className="att-drawer-field">
+    <div className={`att-drawer-field${full ? ' att-drawer-field--full' : ''}`}>
       <span className="att-drawer-field__label">{label}</span>
       <div className="att-drawer-field__value">{children ?? '—'}</div>
     </div>

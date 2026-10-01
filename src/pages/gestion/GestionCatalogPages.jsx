@@ -201,6 +201,7 @@ function emptyCursoForm(tipo) {
     jueves: '',
     viernes: '',
     sabado: '',
+    cursoPosterior: '',
   };
 }
 
@@ -246,6 +247,7 @@ function CursoFormModal({
         jueves: isDayOn(editing.jueves) ? 'X' : '',
         viernes: isDayOn(editing.viernes) ? 'X' : '',
         sabado: isDayOn(editing.sabado) ? 'X' : '',
+        cursoPosterior: editing.cursoPosterior != null ? String(editing.cursoPosterior) : '',
       });
     } else {
       setForm(emptyCursoForm(tipoDefault));
@@ -485,6 +487,15 @@ function CursoFormModal({
                   options={docenteOptions}
                   placeholder="Buscar docente…"
                   onSearchChange={setDocenteQ}
+                />
+              </div>
+              <div className="col-12">
+                <label className="form-label small">Curso posterior (opcional)</label>
+                <input
+                  className="form-control form-control-sm"
+                  value={form.cursoPosterior}
+                  placeholder="Ej. Ajedrez nivel II -Medellín (Jueves)"
+                  onChange={(e) => setForm((p) => ({ ...p, cursoPosterior: e.target.value }))}
                 />
               </div>
             </div>
@@ -1314,6 +1325,8 @@ export function GestionCursosCatalogPage() {
   const [editing, setEditing] = useState(null);
   const [creating, setCreating] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [trocarPending, setTrocarPending] = useState(false);
   const [sort, setSort] = useState({ sort: 'nombre', dir: 'asc' });
   const { toast, showToast, setToast } = useAttToast();
 
@@ -1372,6 +1385,7 @@ export function GestionCursosCatalogPage() {
         jueves: form.jueves || null,
         viernes: form.viernes || null,
         sabado: form.sabado || null,
+        cursoPosterior: form.cursoPosterior || null,
       };
       if (editing?.id) return patchJson(`/api/gestion/cursos/${encodeURIComponent(editing.id)}`, payload);
       return postJson('/api/gestion/cursos', payload);
@@ -1391,6 +1405,97 @@ export function GestionCursosCatalogPage() {
     },
     onError: (err) => showToast('danger', err?.message || 'No se pudo guardar el curso'),
   });
+
+  const trocarMut = useMutation({
+    mutationFn: (ids) => postJson('/api/gestion/cursos/trocar', { ids }),
+    onSuccess: async (data) => {
+      setSelectedIds(new Set());
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['gestion-cursos-catalog'] }),
+        queryClient.invalidateQueries({ queryKey: ['gestion-cursos'] }),
+        queryClient.invalidateQueries({ queryKey: ['gestion-cursos-sidebar'] }),
+      ]);
+      const ok = data?.ok?.length || 0;
+      const skip = data?.skipped?.length || 0;
+      showToast('success', `Trocados: ${ok}${skip ? ` · omitidos: ${skip}` : ''}`);
+    },
+    onError: (err) => showToast('danger', err?.message || 'No se pudo trocar'),
+    onSettled: () => setTrocarPending(false),
+  });
+
+  const devolverMut = useMutation({
+    mutationFn: (ids) => postJson('/api/gestion/cursos/devolver', { ids }),
+    onSuccess: async (data) => {
+      setSelectedIds(new Set());
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['gestion-cursos-catalog'] }),
+        queryClient.invalidateQueries({ queryKey: ['gestion-cursos'] }),
+        queryClient.invalidateQueries({ queryKey: ['gestion-cursos-sidebar'] }),
+      ]);
+      const ok = data?.ok?.length || 0;
+      const skip = data?.skipped?.length || 0;
+      showToast('success', `Devueltos: ${ok}${skip ? ` · omitidos: ${skip}` : ''}`);
+    },
+    onError: (err) => showToast('danger', err?.message || 'No se pudo devolver'),
+    onSettled: () => setTrocarPending(false),
+  });
+
+  const cursosRaw = query.data?.cursos || [];
+
+  const confirmTrocar = (ids) => {
+    if (!ids.length) return;
+    const preview = ids
+      .slice(0, 3)
+      .map((id) => {
+        const c = cursosRaw.find((r) => String(r.id) === String(id));
+        return c
+          ? `${c.nombre} → ${c.cursoPosterior || '?'}`
+          : id;
+      })
+      .join('\n');
+    const extra = ids.length > 3 ? `\n… y ${ids.length - 3} más` : '';
+    if (
+      !window.confirm(
+        `¿Trocar ${ids.length} curso(s)? El nombre actual pasará a curso anterior.\n\n${preview}${extra}`,
+      )
+    ) {
+      return;
+    }
+    setTrocarPending(true);
+    trocarMut.mutate(ids);
+  };
+
+  const confirmDevolver = (ids) => {
+    if (!ids.length) return;
+    const preview = ids
+      .slice(0, 3)
+      .map((id) => {
+        const c = cursosRaw.find((r) => String(r.id) === String(id));
+        return c
+          ? `${c.nombre} → ${c.cursoAnterior || '?'}`
+          : id;
+      })
+      .join('\n');
+    const extra = ids.length > 3 ? `\n… y ${ids.length - 3} más` : '';
+    if (
+      !window.confirm(
+        `¿Devolver ${ids.length} curso(s) al nombre anterior?\n\n${preview}${extra}`,
+      )
+    ) {
+      return;
+    }
+    setTrocarPending(true);
+    devolverMut.mutate(ids);
+  };
+
+  const toggleSelectId = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   if (!isNavKeyEnabled('gestion') || !isAdminLike(user)) {
     return <Navigate to={getDefaultAppPath()} replace />;
@@ -1414,7 +1519,17 @@ export function GestionCursosCatalogPage() {
     return '';
   });
   const periodoCupos = query.data?.meta?.periodoCupos || [];
+  const canTrocar = Boolean(canEdit && query.data?.meta?.trocar?.permitido);
   const selected = rows.find((c) => String(c.id) === String(selectedId)) || null;
+
+  useEffect(() => {
+    if (!canTrocar && selectedIds.size) setSelectedIds(new Set());
+  }, [canTrocar, selectedIds.size]);
+
+  const tipoLabel = (tipoId) => {
+    const t = (tiposQuery.data?.tipos || []).find((x) => String(x.id) === String(tipoId));
+    return t ? `${t.nombre} (${t.id})` : tipoId != null ? String(tipoId) : '—';
+  };
 
   const diasResumen = (c) =>
     DIAS_CURSO.filter((d) => isDayOn(c[d.key]))
@@ -1442,6 +1557,8 @@ export function GestionCursosCatalogPage() {
           { key: 'cuposMaximos', header: 'Cupos máximos' },
           { key: 'cuposLlenos', header: 'Cupos llenos' },
           { key: 'cuposDisponibles', header: 'Cupos disponibles' },
+          { key: 'cursoPosterior', header: 'Curso posterior' },
+          { key: 'cursoAnterior', header: 'Curso anterior (trocado)' },
           {
             key: 'dias',
             header: 'Días',
@@ -1519,11 +1636,42 @@ export function GestionCursosCatalogPage() {
       ) : null}
       {query.isError ? <div className="alert alert-danger small">{query.error?.message}</div> : null}
 
+      {canTrocar ? (
+        <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
+          <button
+            type="button"
+            className="btn btn-outline-primary btn-sm"
+            disabled={selectedIds.size === 0 || trocarPending || trocarMut.isPending || devolverMut.isPending}
+            onClick={() => confirmTrocar([...selectedIds])}
+          >
+            {trocarPending || trocarMut.isPending ? 'Trocando…' : `Trocar seleccionados (${selectedIds.size})`}
+          </button>
+          <button
+            type="button"
+            className="btn btn-outline-secondary btn-sm"
+            disabled={selectedIds.size === 0 || trocarPending || trocarMut.isPending || devolverMut.isPending}
+            onClick={() => confirmDevolver([...selectedIds])}
+          >
+            {devolverMut.isPending ? 'Devolviendo…' : `Devolver seleccionados (${selectedIds.size})`}
+          </button>
+          {selectedIds.size ? (
+            <button
+              type="button"
+              className="btn btn-link btn-sm"
+              onClick={() => setSelectedIds(new Set())}
+            >
+              Limpiar selección
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="card border-0 shadow-sm">
         <div className="table-responsive att-admin-table-wrap--mobile-safe">
           <table className="table table-sm table-hover mb-0 att-admin-table att-gestion-table att-cursos-table">
             <thead className="att-sortable-head">
               <tr>
+                {canTrocar ? <th className="att-gestion-actions-col" aria-label="Seleccionar" /> : null}
                 <SortableTh
                   label="ID"
                   column="id"
@@ -1566,20 +1714,21 @@ export function GestionCursosCatalogPage() {
                   dir={sort.dir}
                   onSort={(column) => setSort((current) => toggleColumnSort(current, column))}
                 />
+                <th>Posterior</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {query.isPending ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-4">
+                  <td colSpan={canTrocar ? 9 : 8} className="text-center py-4">
                     <div className="spinner-border spinner-border-sm text-primary" />
                   </td>
                 </tr>
               ) : null}
               {!query.isPending && rows.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center text-muted py-4">Sin cursos</td>
+                  <td colSpan={canTrocar ? 9 : 8} className="text-center text-muted py-4">Sin cursos</td>
                 </tr>
               ) : null}
               {rows.map((c) => {
@@ -1587,6 +1736,7 @@ export function GestionCursosCatalogPage() {
                   c.cuposMaximos != null && String(c.cuposMaximos).trim() !== ''
                     ? Number(c.cuposMaximos)
                     : null;
+                const trocado = Boolean(c.cursoAnterior && String(c.cursoAnterior).trim());
                 return (
                   <tr
                     key={c.id}
@@ -1594,8 +1744,28 @@ export function GestionCursosCatalogPage() {
                     style={{ cursor: 'pointer' }}
                     onClick={() => setSelectedId(c.id)}
                   >
+                    {canTrocar ? (
+                      <td data-label="" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(c.id)}
+                          onChange={() => toggleSelectId(c.id)}
+                          aria-label={`Seleccionar ${c.id}`}
+                        />
+                      </td>
+                    ) : null}
                     <td data-label="ID">{c.id}</td>
-                    <td data-label="Nombre">{c.nombre}</td>
+                    <td data-label="Nombre">
+                      {c.nombre}
+                      {trocado ? (
+                        <span
+                          className="badge bg-warning text-dark ms-1"
+                          title={`Anterior: ${c.cursoAnterior}`}
+                        >
+                          Trocado
+                        </span>
+                      ) : null}
+                    </td>
                     <td data-label="Sede">{c.sede || '—'}</td>
                     <td data-label="Tarifa">{formatCurrencyCop(c.tarifa)}</td>
                     <td data-label="Cupos">
@@ -1605,7 +1775,32 @@ export function GestionCursosCatalogPage() {
                       </span>
                     </td>
                     <td data-label="Estado">{c.estado || '—'}</td>
+                    <td data-label="Posterior" className="small">
+                      {c.cursoPosterior || '—'}
+                    </td>
                     <td data-label="" onClick={(e) => e.stopPropagation()}>
+                      {canTrocar && trocado ? (
+                        <button
+                          type="button"
+                          className="btn btn-link btn-sm"
+                          title={`Devolver a: ${c.cursoAnterior}`}
+                          disabled={trocarPending || trocarMut.isPending || devolverMut.isPending}
+                          onClick={() => confirmDevolver([c.id])}
+                        >
+                          Devolver
+                        </button>
+                      ) : null}
+                      {canTrocar && !trocado && c.cursoPosterior ? (
+                        <button
+                          type="button"
+                          className="btn btn-link btn-sm"
+                          title="Trocar nombre por curso posterior"
+                          disabled={trocarPending || trocarMut.isPending || devolverMut.isPending}
+                          onClick={() => confirmTrocar([c.id])}
+                        >
+                          Trocar
+                        </button>
+                      ) : null}
                       {canEdit ? (
                         <button
                           type="button"
@@ -1634,7 +1829,7 @@ export function GestionCursosCatalogPage() {
         eyebrow="Curso"
         title={selected?.nombre || 'Detalle'}
         subtitle={selected ? `ID ${selected.id}` : null}
-        width={520}
+        width={640}
         footer={
           <>
             <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => setSelectedId(null)}>
@@ -1657,36 +1852,51 @@ export function GestionCursosCatalogPage() {
       >
         {selected ? (
           <>
-            <DrawerSection title="Cupos">
+            <DrawerSection title="Identificación" columns>
+              <DrawerField label="ID">{selected.id}</DrawerField>
+              <DrawerField label="Tipo">{tipoLabel(selected.tipo)}</DrawerField>
+              <DrawerField label="Nombre" full>{selected.nombre || '—'}</DrawerField>
+              <DrawerField label="Nombre corto">{selected.nombreCorto || '—'}</DrawerField>
+              <DrawerField label="Estado">{selected.estado || '—'}</DrawerField>
+              <DrawerField label="Sede">{selected.sede || '—'}</DrawerField>
+            </DrawerSection>
+            <DrawerSection title="Cupos" columns>
               <DrawerField label="Máximos">{selected.cuposMaximos || '—'}</DrawerField>
               <DrawerField label="Mínimos">{selected.cuposMinimos || '—'}</DrawerField>
-              <DrawerField label="Llenos (mes act. + sig.)">{selected.cuposLlenos ?? 0}</DrawerField>
+              <DrawerField label="Llenos (meses insc.)">{selected.cuposLlenos ?? 0}</DrawerField>
               <DrawerField label="Disponibles">
                 {selected.cuposDisponibles != null ? selected.cuposDisponibles : '—'}
               </DrawerField>
             </DrawerSection>
-            <DrawerSection title="Operación">
-              <DrawerField label="Sede">{selected.sede || '—'}</DrawerField>
-              <DrawerField label="Estado">{selected.estado || '—'}</DrawerField>
+            <DrawerSection title="Operación" columns>
               <DrawerField label="Tarifa">{formatCurrencyCop(selected.tarifa)}</DrawerField>
               <DrawerField label="Código facturación">{selected.codigoFacturacion || '—'}</DrawerField>
-            </DrawerSection>
-            <DrawerSection title="Clasificación">
-              <DrawerField label="Actividad">{selected.nombreActividad || selected.actividad || '—'}</DrawerField>
-              <DrawerField label="Línea">{selected.nombreLinea || selected.linea || '—'}</DrawerField>
-              <DrawerField label="Docente">{selected.nombreDocente || selected.docente || '—'}</DrawerField>
-              <DrawerField label="Nombre corto">{selected.nombreCorto || '—'}</DrawerField>
-            </DrawerSection>
-            <DrawerSection title="Horario">
-              <DrawerField label="Días">{diasResumen(selected)}</DrawerField>
               <DrawerField label="Fecha inicio">{formatFechaCorta(selected.fechaInicio)}</DrawerField>
               <DrawerField label="Fecha final">{formatFechaCorta(selected.fechaFinal)}</DrawerField>
             </DrawerSection>
-            {selected.descripcion ? (
-              <DrawerSection title="Descripción">
-                <DrawerField label="Detalle">{selected.descripcion}</DrawerField>
-              </DrawerSection>
-            ) : null}
+            <DrawerSection title="Clasificación" columns>
+              <DrawerField label="Actividad">{selected.nombreActividad || selected.actividad || '—'}</DrawerField>
+              <DrawerField label="Línea">{selected.nombreLinea || selected.linea || '—'}</DrawerField>
+              <DrawerField label="Docente" full>{selected.nombreDocente || selected.docente || '—'}</DrawerField>
+              <DrawerField label="Curso posterior" full>{selected.cursoPosterior || '—'}</DrawerField>
+              <DrawerField label="Curso anterior" full>{selected.cursoAnterior || '—'}</DrawerField>
+            </DrawerSection>
+            <DrawerSection title="Horario" columns>
+              {DIAS_CURSO.filter((d) => isDayOn(selected[d.key])).length ? (
+                <DrawerField label="Días" full>
+                  {DIAS_CURSO.filter((d) => isDayOn(selected[d.key]))
+                    .map((d) => d.label)
+                    .join(' · ')}
+                </DrawerField>
+              ) : (
+                <DrawerField label="Días" full>
+                  —
+                </DrawerField>
+              )}
+            </DrawerSection>
+            <DrawerSection title="Descripción" columns>
+              <DrawerField label="Detalle" full>{selected.descripcion || '—'}</DrawerField>
+            </DrawerSection>
           </>
         ) : null}
       </GestionPanel>

@@ -34,6 +34,7 @@ export const NAV_KEY_GESTION_MODULO = {
   'gestion-participantes': 'participantes',
   'gestion-responsables': 'responsables',
   'gestion-cursos': 'cursos',
+  'gestion-recomendaciones': 'recomendaciones',
   'gestion-entrenadores': 'entrenadores',
 };
 
@@ -43,6 +44,7 @@ const GESTION_PATH_ORDER = [
   ['participantes', '/gestion/participantes'],
   ['responsables', '/gestion/responsables'],
   ['cursos', '/gestion/cursos'],
+  ['recomendaciones', '/gestion/recomendaciones'],
   ['entrenadores', '/gestion/entrenadores'],
   ['tipo_campos', '/gestion/campos'],
   ['permisos', '/gestion/permisos'],

@@ -25,6 +25,12 @@ const LINKS = [
     icon: IconBall,
   },
   {
+    to: '/gestion/recomendaciones',
+    label: 'Recomendaciones',
+    modulo: 'recomendaciones',
+    match: (p) => p.startsWith('/gestion/recomendaciones'),
+  },
+  {
     to: '/gestion/entrenadores',
     label: 'Entrenadores',
     modulo: 'entrenadores',

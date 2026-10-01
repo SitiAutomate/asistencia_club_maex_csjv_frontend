@@ -20,6 +20,57 @@
   text-overflow: ellipsis;
 }
 
+/* Inputs / selectores blancos en tabs del gestor */
+.att-gestion-page .form-control,
+.att-gestion-page .form-select,
+.att-gestion-page .att-search-select__trigger,
+.att-gestion-page .att-gestion-search__input,
+.att-gestion-page input[type='text'],
+.att-gestion-page input[type='search'],
+.att-gestion-page input[type='number'],
+.att-gestion-page input[type='date'],
+.att-gestion-page input[type='email'],
+.att-gestion-page input[type='tel'],
+.att-gestion-page select,
+.att-gestion-page textarea,
+.att-drawer .form-control,
+.att-drawer .form-select,
+.att-drawer .att-search-select__trigger,
+.att-drawer .att-gestion-search__input,
+.modal .form-control,
+.modal .form-select,
+.modal .att-search-select__trigger,
+.modal .att-gestion-search__input {
+  background-color: #fff !important;
+}
+
+.att-gestion-page .form-control:disabled,
+.att-gestion-page .form-select:disabled,
+.att-gestion-page .att-search-select__trigger:disabled,
+.att-drawer .form-control:disabled,
+.att-drawer .form-select:disabled,
+.att-drawer .att-search-select__trigger:disabled,
+.modal .form-control:disabled,
+.modal .form-select:disabled,
+.modal .att-search-select__trigger:disabled {
+  background-color: #fff !important;
+  opacity: 0.75;
+}
+
+/* Espacio para FABs: el paginador no queda tapado por Excel/Nuevo */
+.att-gestion-page .card > .card-footer,
+.att-gestion-page .att-gestion-table-card > .card-footer {
+  padding-right: 5.5rem;
+}
+
+@media (max-width: 575.98px) {
+  .att-gestion-page .card > .card-footer,
+  .att-gestion-page .att-gestion-table-card > .card-footer {
+    padding-right: 1rem;
+    padding-bottom: 4.5rem;
+  }
+}
+
 .att-search-select__dropdown {
   position: absolute;
   z-index: 1060;
@@ -126,15 +177,19 @@
 }
 
 .att-gestion-table thead th {
-  background: #f8fafc;
+  background: #eef1f6;
   white-space: nowrap;
   vertical-align: middle;
   font-size: 0.72rem;
   font-weight: 700;
-  color: #334155;
-  border-bottom: 1px solid #dbe3ea;
+  color: #000;
+  border-bottom: 1px solid #d1d5db;
   padding: 0.28rem 0.4rem;
   position: relative;
+}
+
+.att-gestion-table tbody tr {
+  background: #fff;
 }
 
 .att-gestion-table tbody td {
@@ -142,6 +197,32 @@
   padding: 0.28rem 0.4rem;
   font-size: 0.78rem;
   line-height: 1.25;
+  background: #fff;
+  color: #111827;
+}
+
+.att-gestion-page .att-admin-table thead th,
+.att-gestion-page .att-admin-table.att-gestion-table thead th {
+  background: #eef1f6;
+  color: #000;
+  font-weight: 700;
+  border-bottom: 1px solid #d1d5db;
+}
+
+.att-gestion-page .att-admin-table tbody tr,
+.att-gestion-page .att-admin-table.att-gestion-table tbody tr {
+  background: #fff;
+}
+
+.att-gestion-page .att-admin-table tbody td,
+.att-gestion-page .att-admin-table.att-gestion-table tbody td {
+  background: #fff;
+  color: #111827;
+}
+
+.att-gestion-page .att-admin-table tbody tr:nth-child(even),
+.att-gestion-page .att-admin-table.att-gestion-table tbody tr:nth-child(even) {
+  background: #fff;
 }
 
 .att-gestion-table--dense {
@@ -1363,11 +1444,31 @@ body.att-col-resizing iframe {
   margin: 0 0 0.65rem;
 }
 
+.att-drawer-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem 0.85rem;
+}
+
+.att-drawer-grid .att-drawer-field--full {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 420px) {
+  .att-drawer-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .att-drawer-field {
   margin-bottom: 0.55rem;
 }
 
 .att-drawer-field:last-child {
+  margin-bottom: 0;
+}
+
+.att-drawer-grid > .att-drawer-field {
   margin-bottom: 0;
 }
 
@@ -1629,6 +1730,19 @@ body.att-col-resizing iframe {
 .att-gestion-fab__btn--new:hover:not(:disabled) {
   background: #fff;
   color: #1d4ed8;
+  border-color: #93c5fd;
+}
+
+.att-gestion-fab__btn--save {
+  color: #1d4ed8;
+  font-weight: 700;
+  background: linear-gradient(180deg, rgba(37, 99, 235, 0.22) 0%, rgba(37, 99, 235, 0.1) 100%);
+  border-color: rgba(37, 99, 235, 0.3);
+}
+
+.att-gestion-fab__btn--save:hover:not(:disabled) {
+  background: #fff;
+  color: #1e40af;
   border-color: #93c5fd;
 }
 
