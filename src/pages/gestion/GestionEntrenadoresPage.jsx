@@ -574,7 +574,7 @@ export function GestionEntrenadoresPage() {
       </GestionPanel>
 
       <EntrenadorFormPanel
-        key={creating ? 'new' : `edit-${editing?.id}-${editDetailQuery.dataUpdatedAt || 0}`}
+        key={creating ? 'new' : `edit-${editing?.id || 'closed'}`}
         open={(creating || Boolean(editing)) && formReady}
         title={creating ? 'Nuevo entrenador' : 'Editar entrenador'}
         initial={editInitial}

@@ -263,7 +263,7 @@ function FichaModal({ kind, documento, onClose }) {
   );
 }
 
-function useEntityOptions(kind, enabled, selectedValue, selectedLabel) {
+function useEntityOptions(kind, enabled, selectedValue, selectedLabel, pinnedOption = null) {
   const [q, setQ] = useState('');
   const path =
     kind === 'participantes'
@@ -289,7 +289,19 @@ function useEntityOptions(kind, enabled, selectedValue, selectedLabel) {
       idResponsable: r.idResponsable || '',
       nombreResponsable: r.nombreResponsable || '',
     }));
-    if (
+    const pin =
+      pinnedOption && pinnedOption.value != null && String(pinnedOption.value).trim() !== ''
+        ? pinnedOption
+        : null;
+    if (pin && !mapped.some((o) => String(o.value) === String(pin.value))) {
+      mapped.unshift({
+        value: pin.value,
+        label: pin.label || String(pin.value),
+        searchText: pin.searchText || `${pin.label || ''} ${pin.value}`,
+        idResponsable: pin.idResponsable || '',
+        nombreResponsable: pin.nombreResponsable || '',
+      });
+    } else if (
       selectedValue &&
       !mapped.some((o) => String(o.value) === String(selectedValue))
     ) {
@@ -299,11 +311,11 @@ function useEntityOptions(kind, enabled, selectedValue, selectedLabel) {
           ? `${selectedLabel} (${selectedValue})`
           : String(selectedValue),
         idResponsable: '',
-        nombreResponsable: '',
+        nombreResponsable: selectedLabel || '',
       });
     }
     return mapped;
-  }, [query.data, kind, selectedValue, selectedLabel]);
+  }, [query.data, kind, selectedValue, selectedLabel, pinnedOption]);
 
   return { options, setQ, isPending: query.isPending };
 }
@@ -349,24 +361,40 @@ function InscripcionFormModal({
 }) {
   const [form, setForm] = useState(() => emptyForm(tipoFijo));
   const [formError, setFormError] = useState('');
+  const [pinnedResponsable, setPinnedResponsable] = useState(null);
+  const responsableManualRef = useRef(false);
   const tipo = Number(tipoFijo ?? form.tipo);
   const isRetirado = String(form.estado || '').toUpperCase() === 'RETIRADO';
   const causalesOptions = useCausalesOptions(open);
+  const formLoadKey = open ? (initial?.id != null ? String(initial.id) : 'new') : '';
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !formLoadKey) return;
     setFormError('');
+    responsableManualRef.current = false;
     if (initial) {
       const extras = {};
       (initial.camposExtra || []).forEach((c) => {
         if (c?.campoKey) extras[c.campoKey] = c.value ?? '';
       });
+      const docResp = initial.documentoResponsable || '';
+      const nombreResp =
+        initial.responsable?.nombreCompleto || initial.nombreResponsable || '';
+      setPinnedResponsable(
+        docResp
+          ? {
+              value: docResp,
+              label: nombreResp ? `${nombreResp} (${docResp})` : String(docResp),
+              searchText: `${nombreResp} ${docResp}`,
+            }
+          : null,
+      );
       setForm({
         ...emptyForm(tipoFijo ?? initial.tipo),
         tipo: initial.tipo ?? tipoFijo ?? '',
         idCurso: initial.idCurso || '',
         documentoParticipante: initial.documentoParticipante || '',
-        documentoResponsable: initial.documentoResponsable || '',
+        documentoResponsable: docResp,
         mes: String(initial.mes || '').padStart(2, '0'),
         anio: String(initial.año || initial.anio || anioMesBogotaClient().anio),
         sede: initial.sede || 'MEDELLÍN',
@@ -383,9 +411,10 @@ function InscripcionFormModal({
         camposExtra: extras,
       });
     } else {
+      setPinnedResponsable(null);
       setForm(emptyForm(tipoFijo));
     }
-  }, [open, initial, tipoFijo]);
+  }, [open, formLoadKey, tipoFijo]);
 
   const isNueva = !initial?.id;
 
@@ -484,18 +513,15 @@ function InscripcionFormModal({
     form.documentoParticipante,
     initial?.nombreParticipante,
   );
-  const selectedPart = useMemo(
-    () =>
-      partOpts.options.find(
-        (o) => String(o.value) === String(form.documentoParticipante || ''),
-      ),
-    [partOpts.options, form.documentoParticipante],
-  );
+
   const respOpts = useEntityOptions(
     'responsables',
     open,
     form.documentoResponsable,
-    initial?.responsable?.nombreCompleto || selectedPart?.nombreResponsable,
+    pinnedResponsable?.label?.replace(/\s*\([^)]*\)\s*$/, '') ||
+      initial?.responsable?.nombreCompleto ||
+      initial?.nombreResponsable,
+    pinnedResponsable,
   );
 
   const cursoOptions = useMemo(() => {
@@ -656,8 +682,20 @@ function InscripcionFormModal({
                     setForm((p) => ({
                       ...p,
                       documentoParticipante: v,
-                      ...(idResp ? { documentoResponsable: idResp } : {}),
+                      ...(idResp && !responsableManualRef.current
+                        ? { documentoResponsable: idResp }
+                        : {}),
                     }));
+                    if (idResp && !responsableManualRef.current) {
+                      const nombre = opt?.nombreResponsable || '';
+                      setPinnedResponsable({
+                        value: idResp,
+                        label: nombre ? `${nombre} (${idResp})` : String(idResp),
+                        searchText: `${nombre} ${idResp}`,
+                        idResponsable: idResp,
+                        nombreResponsable: nombre,
+                      });
+                    }
                   }}
                   options={partOpts.options}
                   placeholder="Buscar participante…"
@@ -669,7 +707,21 @@ function InscripcionFormModal({
                 <label className="form-label small">Responsable</label>
                 <SearchableSelect
                   value={form.documentoResponsable}
-                  onChange={(v) => setForm((p) => ({ ...p, documentoResponsable: v }))}
+                  onChange={(v, opt) => {
+                    responsableManualRef.current = Boolean(v);
+                    setForm((p) => ({ ...p, documentoResponsable: v }));
+                    if (v && opt) {
+                      setPinnedResponsable({
+                        value: v,
+                        label: opt.label || String(v),
+                        searchText: opt.searchText || `${opt.label || ''} ${v}`,
+                        idResponsable: opt.idResponsable || v,
+                        nombreResponsable: opt.nombreResponsable || '',
+                      });
+                    } else if (!v) {
+                      setPinnedResponsable(null);
+                    }
+                  }}
                   options={respOpts.options}
                   placeholder="Buscar responsable…"
                   allowClear={false}

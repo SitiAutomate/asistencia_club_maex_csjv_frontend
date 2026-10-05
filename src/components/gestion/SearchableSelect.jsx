@@ -26,10 +26,14 @@ export function SearchableSelect({
   const menuRef = useRef(null);
   const triggerRef = useRef(null);
 
-  const selected = useMemo(
-    () => options.find((o) => String(o.value) === String(value ?? '')),
-    [options, value],
-  );
+  const selected = useMemo(() => {
+    const hit = options.find((o) => String(o.value) === String(value ?? ''));
+    if (hit) return hit;
+    if (value != null && String(value).trim() !== '') {
+      return { value, label: String(value) };
+    }
+    return undefined;
+  }, [options, value]);
 
   const filtered = useMemo(() => {
     if (typeof onSearchChange === 'function') return options;

@@ -95,14 +95,33 @@ function withCurrentOption(options, value) {
 }
 
 function renderFormField(f, form, setForm) {
+  const rawOptions = f.options || [];
+  const currentVal = form[f.key];
+  const options =
+    f.type === 'select' &&
+    currentVal != null &&
+    String(currentVal).trim() !== '' &&
+    !rawOptions.some((o) => String(o.value) === String(currentVal))
+      ? [
+          {
+            value: currentVal,
+            label: f.selectedLabel || String(currentVal),
+          },
+          ...rawOptions,
+        ]
+      : rawOptions;
+
   return (
     <div key={f.key} className={f.col || 'col-md-6'}>
       <label className="form-label small">{f.label}</label>
       {f.type === 'select' ? (
         <SearchableSelect
           value={form[f.key] || ''}
-          onChange={(v) => setForm((p) => ({ ...p, [f.key]: v }))}
-          options={f.options || []}
+          onChange={(v, opt) => {
+            setForm((p) => ({ ...p, [f.key]: v }));
+            f.onSelect?.(v, opt);
+          }}
+          options={options}
           placeholder={f.placeholder || 'Seleccione…'}
           allowClear={f.allowClear !== false}
           onSearchChange={f.onSearchChange}
@@ -222,10 +241,23 @@ function CursoFormModal({
 }) {
   const [form, setForm] = useState(() => emptyCursoForm(tipoDefault));
   const [docenteQ, setDocenteQ] = useState('');
+  const [pinnedDocente, setPinnedDocente] = useState(null);
+  const formLoadKey = open ? (editing?.id != null ? String(editing.id) : 'new') : '';
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !formLoadKey) return;
     if (editing) {
+      const docenteVal = editing.docente != null ? String(editing.docente) : '';
+      setPinnedDocente(
+        docenteVal
+          ? {
+              value: docenteVal,
+              label: editing.nombreDocente
+                ? `${editing.nombreDocente} (${docenteVal})`
+                : docenteVal,
+            }
+          : null,
+      );
       setForm({
         ...emptyCursoForm(tipoDefault),
         ...editing,
@@ -234,7 +266,7 @@ function CursoFormModal({
         tipo: String(editing.tipo || tipoDefault || '1'),
         actividad: editing.actividad != null ? String(editing.actividad) : '',
         linea: editing.linea != null ? String(editing.linea) : '',
-        docente: editing.docente != null ? String(editing.docente) : '',
+        docente: docenteVal,
         tarifa: digitsOnly(editing.tarifa),
         estado: editing.estado || 'ACTIVO',
         sede: editing.sede || 'MEDELLÍN',
@@ -257,10 +289,11 @@ function CursoFormModal({
         cursoPosterior: toUpperCursoNombre(editing.cursoPosterior),
       });
     } else {
+      setPinnedDocente(null);
       setForm(emptyCursoForm(tipoDefault));
     }
     setDocenteQ('');
-  }, [open, editing, tipoDefault]);
+  }, [open, formLoadKey, tipoDefault]);
 
   const actQuery = useQuery({
     queryKey: ['gestion-catalog-actividades'],
@@ -304,16 +337,24 @@ function CursoFormModal({
       label: `${e.nombre || 'Sin nombre'}${e.correo ? ` · ${e.correo}` : ''}`,
       searchText: `${e.nombre} ${e.correo} ${e.id}`,
     }));
-    if (form.docente && !rows.some((o) => String(o.value) === String(form.docente))) {
+    const pin = pinnedDocente;
+    if (pin?.value && !rows.some((o) => String(o.value) === String(pin.value))) {
+      rows.unshift({
+        value: String(pin.value),
+        label: pin.label || String(pin.value),
+        searchText: pin.label || String(pin.value),
+      });
+    } else if (
+      form.docente &&
+      !rows.some((o) => String(o.value) === String(form.docente))
+    ) {
       rows.unshift({
         value: String(form.docente),
-        label: editing?.nombreDocente
-          ? `${editing.nombreDocente} (${form.docente})`
-          : String(form.docente),
+        label: String(form.docente),
       });
     }
     return rows;
-  }, [entQuery.data, form.docente, editing]);
+  }, [entQuery.data, form.docente, pinnedDocente]);
 
   if (!open) return null;
 
@@ -517,7 +558,17 @@ function CursoFormModal({
                 <label className="form-label small">Docente</label>
                 <SearchableSelect
                   value={form.docente}
-                  onChange={(v) => setForm((p) => ({ ...p, docente: v }))}
+                  onChange={(v, opt) => {
+                    setForm((p) => ({ ...p, docente: v }));
+                    if (v && opt) {
+                      setPinnedDocente({
+                        value: v,
+                        label: opt.label || String(v),
+                      });
+                    } else if (!v) {
+                      setPinnedDocente(null);
+                    }
+                  }}
                   options={docenteOptions}
                   placeholder="Buscar docente…"
                   onSearchChange={setDocenteQ}
@@ -584,6 +635,7 @@ export function GestionParticipantesPage() {
   const [editing, setEditing] = useState(null);
   const [creating, setCreating] = useState(false);
   const [respQ, setRespQ] = useState('');
+  const [pinnedResp, setPinnedResp] = useState(null);
   const { toast, showToast, setToast } = useAttToast();
 
   const onSort = (column) => {
@@ -611,6 +663,48 @@ export function GestionParticipantesPage() {
     queryFn: () => getJson(`/api/gestion/participantes/${encodeURIComponent(editing.documento)}`),
     enabled: Boolean(editing?.documento) && !creating,
   });
+
+  useEffect(() => {
+    if (creating) {
+      setPinnedResp(null);
+      setRespQ('');
+      return;
+    }
+    if (!editing?.documento) return;
+    const id = editing?.idResponsable;
+    if (id) {
+      setPinnedResp({
+        value: String(id),
+        label: editing.nombreResponsable
+          ? `${editing.nombreResponsable} (${id})`
+          : String(id),
+      });
+    } else {
+      setPinnedResp(null);
+    }
+    setRespQ('');
+  }, [creating, editing?.documento]);
+
+  useEffect(() => {
+    const p = editLoadQuery.data?.participante;
+    if (!p || creating) return;
+    const id = p.idResponsable;
+    if (!id) return;
+    setPinnedResp((prev) => {
+      // No pisar una selección manual distinta al responsable original del registro.
+      if (
+        prev?.value &&
+        String(prev.value) !== String(editing?.idResponsable || '') &&
+        String(prev.value) !== String(id)
+      ) {
+        return prev;
+      }
+      return {
+        value: String(id),
+        label: p.nombreResponsable ? `${p.nombreResponsable} (${id})` : String(id),
+      };
+    });
+  }, [creating, editing?.idResponsable, editLoadQuery.data?.participante]);
 
   const respQuery = useQuery({
     queryKey: ['gestion-entity-opts', 'responsables', respQ],
@@ -657,17 +751,11 @@ export function GestionParticipantesPage() {
     value: r.documento,
     label: `${r.nombreCompleto || 'Sin nombre'} (${r.documento})`,
   }));
-  const editBase = editing || detail || selectedRow;
   if (
-    editBase?.idResponsable &&
-    !respOptions.some((o) => String(o.value) === String(editBase.idResponsable))
+    pinnedResp?.value &&
+    !respOptions.some((o) => String(o.value) === String(pinnedResp.value))
   ) {
-    respOptions.unshift({
-      value: editBase.idResponsable,
-      label: editBase.nombreResponsable
-        ? `${editBase.nombreResponsable} (${editBase.idResponsable})`
-        : String(editBase.idResponsable),
-    });
+    respOptions.unshift(pinnedResp);
   }
 
   const sections = [
@@ -716,6 +804,17 @@ export function GestionParticipantesPage() {
           options: respOptions,
           placeholder: 'Buscar responsable…',
           onSearchChange: setRespQ,
+          selectedLabel: pinnedResp?.label,
+          onSelect: (v, opt) => {
+            if (v && opt) {
+              setPinnedResp({
+                value: v,
+                label: opt.label || String(v),
+              });
+            } else if (!v) {
+              setPinnedResp(null);
+            }
+          },
           col: 'col-12',
         },
       ],
@@ -880,7 +979,7 @@ export function GestionParticipantesPage() {
       </GestionPanel>
 
       <EntityFormModal
-        key={creating ? 'new-part' : `edit-${editing?.documento}-${editLoadQuery.dataUpdatedAt || 0}`}
+        key={creating ? 'new-part' : `edit-${editing?.documento || 'closed'}`}
         open={creating || (Boolean(editing) && !editLoadQuery.isPending)}
         title={editing ? 'Editar participante' : 'Nuevo participante'}
         hint="El nombre completo se arma con primer/segundo nombre y apellidos."
@@ -889,6 +988,8 @@ export function GestionParticipantesPage() {
         onClose={() => {
           setCreating(false);
           setEditing(null);
+          setPinnedResp(null);
+          setRespQ('');
         }}
         onSubmit={(form) =>
           saveMut.mutate({
@@ -948,7 +1049,9 @@ function ResponsableFormModal({
     const base = initial || {};
     setForm(base);
     setDepto(String(base.departamento || '').trim());
-  }, [open, initial]);
+    // Solo al abrir / cambiar de registro (el padre usa `key` por documento).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const resolveDeptoFromCiudad = useQuery({
     queryKey: ['gestion-catalog-ciudades-all-resolve', form.ciudad],
@@ -981,6 +1084,16 @@ function ResponsableFormModal({
     label: c.nombre,
     searchText: `${c.nombre} ${c.codigo}`,
   }));
+  if (
+    form.ciudad &&
+    !ciudadOptions.some((o) => String(o.value) === String(form.ciudad))
+  ) {
+    ciudadOptions.unshift({
+      value: form.ciudad,
+      label: form.ciudad,
+      searchText: form.ciudad,
+    });
+  }
 
   return (
     <GestionPanel
