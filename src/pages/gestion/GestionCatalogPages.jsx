@@ -45,6 +45,11 @@ function digitsOnly(value) {
   return String(value ?? '').replace(/\D/g, '');
 }
 
+/** Nombres de curso siempre en mayúsculas (escritura y pegado). */
+function toUpperCursoNombre(value) {
+  return String(value ?? '').toLocaleUpperCase('es-CO');
+}
+
 function isDayOn(value) {
   const s = String(value ?? '').trim().toUpperCase();
   return s === 'X' || s === 'SI' || s === '1' || s === 'TRUE';
@@ -224,6 +229,8 @@ function CursoFormModal({
       setForm({
         ...emptyCursoForm(tipoDefault),
         ...editing,
+        nombre: toUpperCursoNombre(editing.nombre),
+        nombreCorto: toUpperCursoNombre(editing.nombreCorto),
         tipo: String(editing.tipo || tipoDefault || '1'),
         actividad: editing.actividad != null ? String(editing.actividad) : '',
         linea: editing.linea != null ? String(editing.linea) : '',
@@ -247,7 +254,7 @@ function CursoFormModal({
         jueves: isDayOn(editing.jueves) ? 'X' : '',
         viernes: isDayOn(editing.viernes) ? 'X' : '',
         sabado: isDayOn(editing.sabado) ? 'X' : '',
-        cursoPosterior: editing.cursoPosterior != null ? String(editing.cursoPosterior) : '',
+        cursoPosterior: toUpperCursoNombre(editing.cursoPosterior),
       });
     } else {
       setForm(emptyCursoForm(tipoDefault));
@@ -327,7 +334,14 @@ function CursoFormModal({
             type="button"
             className="btn btn-primary btn-sm"
             disabled={isPending}
-            onClick={() => onSubmit(form)}
+            onClick={() =>
+              onSubmit({
+                ...form,
+                nombre: toUpperCursoNombre(form.nombre),
+                nombreCorto: toUpperCursoNombre(form.nombreCorto),
+                cursoPosterior: toUpperCursoNombre(form.cursoPosterior),
+              })
+            }
           >
             {isPending ? 'Guardando…' : 'Guardar'}
           </button>
@@ -351,17 +365,37 @@ function CursoFormModal({
               <div className="col-md-8">
                 <label className="form-label small">Nombre del curso</label>
                 <input
-                  className="form-control form-control-sm"
+                  className="form-control form-control-sm text-uppercase"
+                  style={{ textTransform: 'uppercase' }}
+                  autoCapitalize="characters"
+                  spellCheck={false}
                   value={form.nombre}
-                  onChange={(e) => setForm((p) => ({ ...p, nombre: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, nombre: toUpperCursoNombre(e.target.value) }))
+                  }
+                  onPaste={(e) => {
+                    e.preventDefault();
+                    const text = e.clipboardData?.getData('text') || '';
+                    setForm((p) => ({ ...p, nombre: toUpperCursoNombre(text) }));
+                  }}
                 />
               </div>
               <div className="col-md-6">
                 <label className="form-label small">Nombre corto</label>
                 <input
-                  className="form-control form-control-sm"
+                  className="form-control form-control-sm text-uppercase"
+                  style={{ textTransform: 'uppercase' }}
+                  autoCapitalize="characters"
+                  spellCheck={false}
                   value={form.nombreCorto}
-                  onChange={(e) => setForm((p) => ({ ...p, nombreCorto: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, nombreCorto: toUpperCursoNombre(e.target.value) }))
+                  }
+                  onPaste={(e) => {
+                    e.preventDefault();
+                    const text = e.clipboardData?.getData('text') || '';
+                    setForm((p) => ({ ...p, nombreCorto: toUpperCursoNombre(text) }));
+                  }}
                 />
               </div>
               <div className="col-md-6">
@@ -492,10 +526,23 @@ function CursoFormModal({
               <div className="col-12">
                 <label className="form-label small">Curso posterior (opcional)</label>
                 <input
-                  className="form-control form-control-sm"
+                  className="form-control form-control-sm text-uppercase"
+                  style={{ textTransform: 'uppercase' }}
+                  autoCapitalize="characters"
+                  spellCheck={false}
                   value={form.cursoPosterior}
-                  placeholder="Ej. Ajedrez nivel II -Medellín (Jueves)"
-                  onChange={(e) => setForm((p) => ({ ...p, cursoPosterior: e.target.value }))}
+                  placeholder="EJ. AJEDREZ NIVEL II -MEDELLÍN (JUEVES)"
+                  onChange={(e) =>
+                    setForm((p) => ({
+                      ...p,
+                      cursoPosterior: toUpperCursoNombre(e.target.value),
+                    }))
+                  }
+                  onPaste={(e) => {
+                    e.preventDefault();
+                    const text = e.clipboardData?.getData('text') || '';
+                    setForm((p) => ({ ...p, cursoPosterior: toUpperCursoNombre(text) }));
+                  }}
                 />
               </div>
             </div>
