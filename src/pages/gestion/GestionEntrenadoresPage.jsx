@@ -19,6 +19,16 @@ function emptyAsignacionRow() {
   return { actividad: '', estado: 'ACTIVO', apoyo: false, lider: false };
 }
 
+const ACCESO_LABELS = {
+  historial: 'Solo historial (sin otros módulos)',
+  asistencia_historial: 'Asistencia e historial',
+};
+
+function accesoLabel(value) {
+  const key = String(value || '').trim() || 'asistencia_historial';
+  return ACCESO_LABELS[key] || ACCESO_LABELS.asistencia_historial;
+}
+
 function AsignacionesEditor({ value, onChange, actividadOptions, disabled }) {
   const rows = value?.length ? value : [emptyAsignacionRow()];
 
@@ -162,13 +172,14 @@ function EntrenadorFormPanel({
       {error ? <div className="alert alert-danger small py-2">{error}</div> : null}
       <div className="row g-2 mb-3">
         <div className="col-md-4">
-          <label className="form-label small">ID</label>
+          <label className="form-label small">Documento</label>
           <input
             className="form-control form-control-sm"
             value={form.id || ''}
             disabled={idLocked || isPending}
             onChange={(e) => setForm((p) => ({ ...p, id: e.target.value }))}
           />
+          <div className="form-text">Número de cédula (también se usa como ID).</div>
         </div>
         <div className="col-md-8">
           <label className="form-label small">Nombre</label>
@@ -188,7 +199,23 @@ function EntrenadorFormPanel({
             disabled={isPending}
             onChange={(e) => setForm((p) => ({ ...p, correo: e.target.value }))}
           />
-          <div className="form-text">Las asignaciones se vinculan por este correo.</div>
+          <div className="form-text">Las asignaciones y el acceso a asistencia se vinculan por este correo.</div>
+        </div>
+        <div className="col-12">
+          <label className="form-label small">Acceso a asistencia</label>
+          <select
+            className="form-select form-select-sm"
+            value={form.accesoAsistencia || 'asistencia_historial'}
+            disabled={isPending}
+            onChange={(e) => setForm((p) => ({ ...p, accesoAsistencia: e.target.value }))}
+          >
+            <option value="asistencia_historial">Asistencia e historial</option>
+            <option value="historial">Solo historial</option>
+          </select>
+          <div className="form-text">
+            «Solo historial»: únicamente Asistencia → Historial (sin registrar, rúbricas, reportes, LVL UP ni otros
+            módulos). «Asistencia e historial»: acceso normal de entrenador.
+          </div>
         </div>
       </div>
       <DrawerSection title="Disciplinas y apoyo">
@@ -266,6 +293,7 @@ export function GestionEntrenadoresPage() {
       const payload = {
         nombre: form.nombre,
         correo: form.correo,
+        accesoAsistencia: form.accesoAsistencia || 'asistencia_historial',
         asignaciones,
       };
       if (editing?.id) {
@@ -293,7 +321,13 @@ export function GestionEntrenadoresPage() {
 
   const editInitial = useMemo(() => {
     if (creating) {
-      return { id: '', nombre: '', correo: '', asignaciones: [emptyAsignacionRow()] };
+      return {
+        id: '',
+        nombre: '',
+        correo: '',
+        accesoAsistencia: 'asistencia_historial',
+        asignaciones: [emptyAsignacionRow()],
+      };
     }
     if (!editing) return null;
     const fromDetail = editDetailQuery.data;
@@ -308,6 +342,10 @@ export function GestionEntrenadoresPage() {
       id: editing.id || fromDetail?.entrenador?.id || '',
       nombre: fromDetail?.entrenador?.nombre || editing.nombre || '',
       correo: fromDetail?.entrenador?.correo || editing.correo || '',
+      accesoAsistencia:
+        fromDetail?.entrenador?.accesoAsistencia ||
+        editing.accesoAsistencia ||
+        'asistencia_historial',
       asignaciones: asig.length ? asig : [emptyAsignacionRow()],
     };
   }, [creating, editing, editDetailQuery.data]);
@@ -336,7 +374,7 @@ export function GestionEntrenadoresPage() {
       <div className="mb-3">
         <GestionSearchInput
           style={{ maxWidth: '100%', width: '100%' }}
-          placeholder="Buscar por ID, nombre o correo…"
+          placeholder="Buscar por documento, nombre o correo…"
           value={q}
           onChange={(e) => {
             setQ(e.target.value);
@@ -352,7 +390,7 @@ export function GestionEntrenadoresPage() {
             <thead className="att-sortable-head">
               <tr>
                 <SortableTh
-                  label="ID"
+                  label="Documento"
                   column="id"
                   sort={sort.sort}
                   dir={sort.dir}
@@ -374,6 +412,16 @@ export function GestionEntrenadoresPage() {
                 <SortableTh
                   label="Correo"
                   column="correo"
+                  sort={sort.sort}
+                  dir={sort.dir}
+                  onSort={(column) => {
+                    setSort((current) => toggleColumnSort(current, column));
+                    setPage(1);
+                  }}
+                />
+                <SortableTh
+                  label="Acceso"
+                  column="acceso"
                   sort={sort.sort}
                   dir={sort.dir}
                   onSort={(column) => {
@@ -407,14 +455,14 @@ export function GestionEntrenadoresPage() {
             <tbody>
               {query.isPending ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-4">
+                  <td colSpan={7} className="text-center py-4">
                     <div className="spinner-border spinner-border-sm text-primary" />
                   </td>
                 </tr>
               ) : null}
               {!query.isPending && rows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center text-muted py-4">
+                  <td colSpan={7} className="text-center text-muted py-4">
                     Sin entrenadores
                   </td>
                 </tr>
@@ -426,9 +474,10 @@ export function GestionEntrenadoresPage() {
                   style={{ cursor: 'pointer' }}
                   onClick={() => setSelectedId(r.id)}
                 >
-                  <td data-label="ID">{r.id}</td>
+                  <td data-label="Documento">{r.id}</td>
                   <td data-label="Nombre">{r.nombre || '—'}</td>
                   <td data-label="Correo">{r.correo || '—'}</td>
+                  <td data-label="Acceso">{accesoLabel(r.accesoAsistencia)}</td>
                   <td data-label="Disciplinas">{r.countAsignaciones ?? 0}</td>
                   <td data-label="Cursos">{r.countCursos ?? 0}</td>
                   <td data-label="" onClick={(e) => e.stopPropagation()}>
@@ -513,9 +562,12 @@ export function GestionEntrenadoresPage() {
         {detail ? (
           <>
             <DrawerSection title="Datos">
-              <DrawerField label="ID">{detail.id}</DrawerField>
+              <DrawerField label="Documento">{detail.id}</DrawerField>
               <DrawerField label="Nombre">{detail.nombre || '—'}</DrawerField>
               <DrawerField label="Correo">{detail.correo || '—'}</DrawerField>
+              <DrawerField label="Acceso a asistencia">
+                {accesoLabel(detail.accesoAsistencia)}
+              </DrawerField>
             </DrawerSection>
             <DrawerSection title="Disciplinas asignadas">
               {detailAsig.length === 0 ? (

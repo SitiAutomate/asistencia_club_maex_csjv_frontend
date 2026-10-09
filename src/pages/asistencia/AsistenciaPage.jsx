@@ -52,16 +52,21 @@ export function AsistenciaPage() {
   const { user } = useOutletContext() || {};
   const email = user?.email || '';
   const isAdmin = isAdminLike(user);
+  const accesoAsistencia = String(user?.accesoAsistencia || 'asistencia_historial').trim();
+  const canRegistrar = isAdmin || accesoAsistencia !== 'historial';
   const [searchParams, setSearchParams] = useSearchParams();
-  const vista =
-    searchParams.get('tab') === 'historial'
+  const tabParam = searchParams.get('tab');
+  const vista = !canRegistrar
+    ? 'historial'
+    : tabParam === 'historial'
       ? 'historial'
-      : searchParams.get('tab') === 'pendientes' && isAdmin
+      : tabParam === 'pendientes' && isAdmin
         ? 'pendientes'
         : 'registrar';
   const mesActual = useMemo(() => getMesActualRange(), []);
 
   const setVista = (next) => {
+    if (!canRegistrar && next !== 'historial') return;
     if (next === 'historial') {
       setSearchParams({ tab: 'historial' });
       return;
@@ -72,6 +77,12 @@ export function AsistenciaPage() {
     }
     setSearchParams({});
   };
+
+  useEffect(() => {
+    if (!canRegistrar && tabParam !== 'historial') {
+      setSearchParams({ tab: 'historial' }, { replace: true });
+    }
+  }, [canRegistrar, tabParam, setSearchParams]);
 
   const [courseId, setCourseId] = useState('');
   const [courseSearch, setCourseSearch] = useState('');
@@ -229,13 +240,15 @@ export function AsistenciaPage() {
     <>
       <div className="att-toolbar att-toolbar--sticky">
         <div className="att-tabs att-toolbar__tabs">
-          <button
-            type="button"
-            className={`att-tab-btn ${vista === 'registrar' ? 'is-active' : ''}`}
-            onClick={() => setVista('registrar')}
-          >
-            Registrar
-          </button>
+          {canRegistrar ? (
+            <button
+              type="button"
+              className={`att-tab-btn ${vista === 'registrar' ? 'is-active' : ''}`}
+              onClick={() => setVista('registrar')}
+            >
+              Registrar
+            </button>
+          ) : null}
           <button
             type="button"
             className={`att-tab-btn ${vista === 'historial' ? 'is-active' : ''}`}

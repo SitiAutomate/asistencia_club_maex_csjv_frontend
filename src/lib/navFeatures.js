@@ -49,6 +49,13 @@ export function isMaestroLvlupRole(user) {
   return String(user?.rol || '').trim() === LVLUP_ONLY_ROLE;
 }
 
+/** Entrenador con acceso limitado a Asistencia → Historial. */
+export function isHistorialOnlyEntrenador(user) {
+  const rol = String(user?.rol || '').trim();
+  if (rol !== 'Entrenador') return false;
+  return String(user?.accesoAsistencia || '').trim() === 'historial';
+}
+
 /** Administrador operativo + SuperAdministrador (informes, gestión, alcance admin). */
 export function isAdminLike(userOrRol) {
   const rol =
@@ -93,6 +100,13 @@ export function getNavItemsForUser(user) {
     return NAV_DEF.filter((item) => item.key === 'lvlup');
   }
 
+  // Solo historial: únicamente el módulo Asistencia (tab Historial).
+  if (isHistorialOnlyEntrenador(user)) {
+    const asistencia = enabled.filter((item) => item.key === 'asistencia');
+    if (asistencia.length) return asistencia;
+    return NAV_DEF.filter((item) => item.key === 'asistencia');
+  }
+
   return enabled.filter((item) => {
     if (item.key === 'historial') return false;
     if (item.key === 'administrador' || GESTION_KEYS.has(item.key)) {
@@ -121,6 +135,7 @@ export function getDefaultAppPath() {
 }
 
 export function getDefaultAppPathForUser(user) {
+  if (isHistorialOnlyEntrenador(user)) return '/asistencia?tab=historial';
   const items = getNavItemsForUser(user);
   if (items.length > 0) return items[0].path;
   if (isMaestroLvlupRole(user)) return '/lvlup';

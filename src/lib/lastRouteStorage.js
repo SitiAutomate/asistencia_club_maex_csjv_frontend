@@ -1,4 +1,9 @@
-import { canAccessDocs, getNavItemsForUser, isAdminLike } from './navFeatures.js';
+import {
+  canAccessDocs,
+  getNavItemsForUser,
+  isAdminLike,
+  isHistorialOnlyEntrenador,
+} from './navFeatures.js';
 import { canGestion } from './useGestionPermisos.js';
 
 const STORAGE_KEY = 'att-last-route';
@@ -93,6 +98,10 @@ export function loadLastRoute() {
  * @param {{ skipPermisosCheck?: boolean }} [opts] — si true, no exige payload de permisos (aún cargando).
  */
 export function resolveLastRouteForUser(user, permisosPayload, opts = {}) {
+  if (isHistorialOnlyEntrenador(user)) {
+    return '/asistencia?tab=historial';
+  }
+
   const path = loadLastRoute();
   if (!path || !KNOWN_PATHS.has(path)) return null;
 
