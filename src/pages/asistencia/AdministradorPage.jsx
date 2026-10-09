@@ -9,6 +9,7 @@ import {
   periodoEtiqueta,
   usePeriodoInformesConfig,
 } from '../../lib/periodoInformes.js';
+import { exportRowsToExcel } from '../../lib/exportExcel.js';
 
 function tieneInformePdf(informe) {
   return Boolean(String(informe ?? '').trim());
@@ -22,7 +23,6 @@ function fmtFechaCorta(value) {
 }
 
 async function exportInformesExcel(rows) {
-  const { exportRowsToExcel } = await import('../../lib/exportExcel.js');
   await exportRowsToExcel({
     rows,
     sheetName: 'Informes',

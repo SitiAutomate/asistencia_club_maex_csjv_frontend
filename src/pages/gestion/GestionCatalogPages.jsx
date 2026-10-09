@@ -23,6 +23,7 @@ import {
   INTERNO_EXTERNO_OPTS,
   buildNombreCompleto,
 } from '../../lib/gestionCatalogConstants.js';
+import { exportRowsToExcel } from '../../lib/exportExcel.js';
 
 const SEDES_CURSO = [
   { value: 'MEDELLÍN', label: 'MEDELLÍN' },
@@ -1699,7 +1700,6 @@ export function GestionCursosCatalogPage() {
   const exportExcel = async () => {
     try {
       setExporting(true);
-      const { exportRowsToExcel } = await import('../../lib/exportExcel.js');
       await exportRowsToExcel({
         rows,
         sheetName: 'Cursos',

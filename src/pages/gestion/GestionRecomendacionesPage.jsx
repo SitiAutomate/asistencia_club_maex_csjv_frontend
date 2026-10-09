@@ -13,6 +13,7 @@ import { GestionPanelModeToggle } from '../../components/gestion/GestionPanel.js
 import { SearchableSelect } from '../../components/gestion/SearchableSelect.jsx';
 import { GestionSearchInput } from '../../components/gestion/GestionSearchInput.jsx';
 import { AttToast, useAttToast } from '../../components/AttToast.jsx';
+import { exportRowsToExcel } from '../../lib/exportExcel.js';
 
 const FILTER_KEY = 'att-gestion-recomendaciones-filters';
 
@@ -258,7 +259,6 @@ export function GestionRecomendacionesPage() {
   const exportExcel = async () => {
     try {
       setExporting(true);
-      const { exportRowsToExcel } = await import('../../lib/exportExcel.js');
       await exportRowsToExcel({
         rows: filasFiltradas.map((row) => {
           const nombre = effectiveNombre(row, drafts);

@@ -7,6 +7,16 @@ import App from './App.jsx';
 import { AppProviders } from './providers/AppProviders.jsx';
 import faviconPng from './assets/favicon.ico/android-icon-36x36.png';
 
+// Tras un deploy, chunks viejos en caché fallan al importar → recargar una vez.
+window.addEventListener('vite:preloadError', (event) => {
+  event.preventDefault();
+  const key = 'att-vite-preload-reload';
+  if (!sessionStorage.getItem(key)) {
+    sessionStorage.setItem(key, '1');
+    window.location.reload();
+  }
+});
+
 const link = document.querySelector("link[rel='icon']") || document.createElement('link');
 link.setAttribute('rel', 'icon');
 link.setAttribute('type', 'image/png');

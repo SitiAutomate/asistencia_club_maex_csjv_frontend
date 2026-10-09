@@ -28,6 +28,7 @@ import { DrawerSection, SlideDrawer } from '../../components/gestion/SlideDrawer
 import { GestionSearchInput } from '../../components/gestion/GestionSearchInput.jsx';
 import { IconCopy, IconEye, IconFilters, IconMonthPass, IconPencil, IconTrash } from '../../components/gestion/GestionIcons.jsx';
 import { AttToast, useAttToast } from '../../components/AttToast.jsx';
+import { exportRowsToExcel } from '../../lib/exportExcel.js';
 
 /** Evita disparar la lista en cada tecla del buscador. */
 function useDebouncedValue(value, delayMs = 350) {
@@ -2085,7 +2086,6 @@ export function GestionInscripcionesPage({
       const rows = data?.inscritos || [];
       const exportCampos = data?.camposLista || listQuery.data?.camposLista || [];
       const mesSuffix = joinFilterParam(mes);
-      const { exportRowsToExcel } = await import('../../lib/exportExcel.js');
       await exportRowsToExcel({
         rows,
         sheetName: 'Inscripciones',
