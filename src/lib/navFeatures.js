@@ -49,10 +49,10 @@ export function isMaestroLvlupRole(user) {
   return String(user?.rol || '').trim() === LVLUP_ONLY_ROLE;
 }
 
-/** Entrenador con acceso limitado a Asistencia → Historial. */
+/** Entrenador o proveedor con acceso limitado a Asistencia → Historial. */
 export function isHistorialOnlyEntrenador(user) {
   const rol = String(user?.rol || '').trim();
-  if (rol !== 'Entrenador') return false;
+  if (rol !== 'Entrenador' && rol !== 'Proveedor') return false;
   return String(user?.accesoAsistencia || '').trim() === 'historial';
 }
 

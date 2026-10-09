@@ -214,7 +214,8 @@ function EntrenadorFormPanel({
           </select>
           <div className="form-text">
             «Solo historial»: únicamente Asistencia → Historial (sin registrar, rúbricas, reportes, LVL UP ni otros
-            módulos). «Asistencia e historial»: acceso normal de entrenador.
+            módulos). Aplica a entrenadores y proveedores cuyo correo coincida con esta ficha. «Asistencia e
+            historial»: acceso normal.
           </div>
         </div>
       </div>
