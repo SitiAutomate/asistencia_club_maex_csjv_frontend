@@ -1,22 +1,51 @@
 import ExcelJS from 'exceljs';
 
-/**
- * Exporta filas a un archivo .xlsx (ExcelJS empaquetado estático para evitar
- * "Failed to fetch dynamically imported module" en producción tras deploys).
- */
-export async function exportRowsToExcel({ rows, sheetName, fileNamePrefix, columns }) {
-  const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet(sheetName || 'Datos');
-
-  worksheet.columns = columns.map(({ header }) => ({ header, key: header, width: 20 }));
+function fillWorksheet(worksheet, { rows, columns }) {
+  worksheet.columns = (columns || []).map(({ header }) => ({
+    header,
+    key: header,
+    width: Math.min(40, Math.max(14, String(header || '').length + 2)),
+  }));
 
   for (const row of rows || []) {
     const out = {};
-    for (const { key, header, format } of columns) {
+    for (const { key, header, format } of columns || []) {
       const raw = row[key];
       out[header] = format ? format(raw, row) : (raw ?? '');
     }
     worksheet.addRow(out);
+  }
+
+  const headerRow = worksheet.getRow(1);
+  headerRow.font = { bold: true };
+}
+
+/**
+ * Exporta a .xlsx.
+ * - Modo simple: { rows, columns, sheetName, fileNamePrefix }
+ * - Multi-hoja: { sheets: [{ sheetName, rows, columns }], fileNamePrefix }
+ */
+export async function exportRowsToExcel({
+  rows,
+  sheetName,
+  fileNamePrefix,
+  columns,
+  sheets,
+}) {
+  const workbook = new ExcelJS.Workbook();
+  const allSheets =
+    Array.isArray(sheets) && sheets.length
+      ? sheets
+      : [{ sheetName: sheetName || 'Datos', rows, columns }];
+
+  for (const sheet of allSheets) {
+    if (!sheet?.columns?.length) continue;
+    const worksheet = workbook.addWorksheet(sheet.sheetName || 'Datos');
+    fillWorksheet(worksheet, sheet);
+  }
+
+  if (workbook.worksheets.length === 0) {
+    throw new Error('No hay hojas para exportar');
   }
 
   const buffer = await workbook.xlsx.writeBuffer();

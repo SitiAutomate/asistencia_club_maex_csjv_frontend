@@ -131,6 +131,21 @@ function buildAnioOptions(metaAnios, currentAnio) {
     .map((y) => ({ value: y, label: y }));
 }
 
+/** "Club X (Voleibol / Femenina / Infantil)" → nombre + chips */
+function parseEquipoLabel(nombre) {
+  const s = String(nombre || '').trim();
+  if (!s) return { nombre: 'Equipo', chips: [] };
+  const m = s.match(/^(.*?)\s*\((.+)\)\s*$/);
+  if (!m) return { nombre: s, chips: [] };
+  return {
+    nombre: m[1].trim() || s,
+    chips: m[2]
+      .split(/\s*\/\s*/)
+      .map((p) => p.trim())
+      .filter(Boolean),
+  };
+}
+
 function DetailField({ label, children }) {
   return (
     <div className="att-detail-item">
@@ -1208,17 +1223,30 @@ function DetailModal({ id, onClose, onEdit, onDelete, onOpenFicha, canEdit = tru
       open={Boolean(id)}
       onClose={onClose}
       eyebrow="Detalle de inscripción"
-      title={row?.nombreParticipante || (query.isPending ? 'Cargando…' : 'Inscripción')}
+      title={
+        row?.esEquipos
+          ? row?.organizacion ||
+            row?.club ||
+            row?.nombreParticipante ||
+            (query.isPending ? 'Cargando…' : 'Inscripción por equipos')
+          : row?.nombreParticipante || (query.isPending ? 'Cargando…' : 'Inscripción')
+      }
       subtitle={
         row
-          ? `${row.documentoParticipante || ''}${row.nombreCurso || row.idCurso ? ` · ${row.nombreCurso || row.idCurso}` : ''}${
-              row.año ? ` · ${mesLabel} ${row.año}` : ''
-            }`
+          ? [
+              row.esEquipos ? 'Modalidad equipos' : null,
+              row.documentoParticipante,
+              row.nombreCurso || row.idCurso,
+              row.año ? `${mesLabel} ${row.año}` : null,
+              row.esEquipos && row.totalEquipos ? `${row.totalEquipos} equipos` : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')
           : undefined
       }
-      width={560}
+      width={row?.esEquipos ? 640 : 560}
       size="xl"
-      className="att-detail-modal"
+      className={`att-detail-modal${row?.esEquipos ? ' att-detail-modal--equipos' : ''}`}
       footer={detailFooter}
     >
       {row ? <span className={`att-detail-badge ${estadoClass} mb-3 d-inline-flex`}>{row.estado || '—'}</span> : null}
@@ -1232,6 +1260,100 @@ function DetailModal({ id, onClose, onEdit, onDelete, onOpenFicha, canEdit = tru
 
             {row ? (
               <div className="att-detail-sections">
+                {row.esEquipos ? (
+                  <section className="att-detail-section att-detail-section--equipos">
+                    <div className="att-detail-section__head">
+                      <h6 className="att-detail-section__title mb-0">Equipos</h6>
+                      <span className="att-equipos-count">
+                        {row.totalEquipos || (row.equipos || []).length || 0}
+                      </span>
+                    </div>
+                    {(row.eventoEquipos || row.equiposResumen?.evento || row.organizacion || row.club) ? (
+                      <div className="att-equipos-meta">
+                        {row.eventoEquipos || row.equiposResumen?.evento ? (
+                          <span className="att-equipos-meta__item">
+                            <span className="att-equipos-meta__label">Evento</span>
+                            {row.eventoEquipos || row.equiposResumen.evento}
+                          </span>
+                        ) : null}
+                        {row.organizacion || row.club ? (
+                          <span className="att-equipos-meta__item">
+                            <span className="att-equipos-meta__label">Club</span>
+                            {row.organizacion || row.club}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    {(row.equipos || []).length === 0 ? (
+                      <p className="small text-muted mb-0">No hay equipos asociados a esta inscripción.</p>
+                    ) : (
+                      <ol className="att-equipos-list">
+                        {(row.equipos || []).map((eq, idx) => {
+                          const parsed = parseEquipoLabel(eq.nombre || `Equipo ${idx + 1}`);
+                          const chips = [
+                            eq.disciplina,
+                            eq.rama,
+                            eq.categoria,
+                            ...(!eq.disciplina && !eq.rama && !eq.categoria ? parsed.chips : []),
+                          ].filter(Boolean);
+                          const nombreVisible =
+                            eq.disciplina || eq.rama || eq.categoria ? eq.nombre || parsed.nombre : parsed.nombre;
+                          return (
+                            <li key={eq.id || `eq-${idx}`} className="att-equipo-card">
+                              <div className="att-equipo-card__index" aria-hidden="true">
+                                {idx + 1}
+                              </div>
+                              <div className="att-equipo-card__body">
+                                <div className="att-equipo-card__title">{nombreVisible}</div>
+                                {chips.length ? (
+                                  <div className="att-equipo-chips">
+                                    {chips.map((chip) => (
+                                      <span key={`${idx}-${chip}`} className="att-equipo-chip">
+                                        {chip}
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : null}
+                                {(eq.entrenador?.nombre || eq.asistente?.nombre) && !eq.resumenSolo ? (
+                                  <div className="att-equipo-staff">
+                                    {eq.entrenador?.nombre ? (
+                                      <div>
+                                        <span className="att-equipo-staff__role">Entrenador</span>
+                                        <span className="att-equipo-staff__name">{eq.entrenador.nombre}</span>
+                                      </div>
+                                    ) : null}
+                                    {eq.asistente?.nombre ? (
+                                      <div>
+                                        <span className="att-equipo-staff__role">Asistente</span>
+                                        <span className="att-equipo-staff__name">{eq.asistente.nombre}</span>
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                ) : null}
+                                {!eq.resumenSolo && (eq.deportistas || []).length > 0 ? (
+                                  <ul className="att-equipo-players">
+                                    {(eq.deportistas || []).map((d, di) => (
+                                      <li key={d.id || `dep-${idx}-${di}`} className="att-equipo-player">
+                                        <span className="att-equipo-player__n">{d.orden || di + 1}</span>
+                                        <span className="att-equipo-player__name">{d.nombreCompleto || '—'}</span>
+                                        <span className="att-equipo-player__meta">
+                                          {[d.documento, formatFechaCorta(d.fechaNacimiento)]
+                                            .filter((x) => x && x !== '—')
+                                            .join(' · ') || '—'}
+                                        </span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                ) : null}
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ol>
+                    )}
+                  </section>
+                ) : null}
+
                 <section className="att-detail-section">
                   <h6 className="att-detail-section__title">Inscripción</h6>
                   <div className="att-detail-grid">
@@ -1247,22 +1369,26 @@ function DetailModal({ id, onClose, onEdit, onDelete, onOpenFicha, canEdit = tru
                       <span className="att-detail-item__label">Sede</span>
                       <span className="att-detail-item__value">{row.sede || '—'}</span>
                     </div>
-                    <div className="att-detail-item">
-                      <span className="att-detail-item__label">Transporte</span>
-                      <span className="att-detail-item__value">
-                        <span className={`att-detail-chip ${transporteSi ? 'is-yes' : 'is-no'}`}>
-                          {transporteSi ? 'Si' : 'No'}
-                        </span>
-                      </span>
-                    </div>
-                    <div className="att-detail-item">
-                      <span className="att-detail-item__label">Fecha ingreso transporte</span>
-                      <span className="att-detail-item__value">{formatFechaCorta(row.fechaIngresoNuevoTransporte)}</span>
-                    </div>
-                    <div className="att-detail-item">
-                      <span className="att-detail-item__label">Fecha retiro transporte</span>
-                      <span className="att-detail-item__value">{formatFechaCorta(row.fechaRetiroTransporte)}</span>
-                    </div>
+                    {!row.esEquipos ? (
+                      <>
+                        <div className="att-detail-item">
+                          <span className="att-detail-item__label">Transporte</span>
+                          <span className="att-detail-item__value">
+                            <span className={`att-detail-chip ${transporteSi ? 'is-yes' : 'is-no'}`}>
+                              {transporteSi ? 'Si' : 'No'}
+                            </span>
+                          </span>
+                        </div>
+                        <div className="att-detail-item">
+                          <span className="att-detail-item__label">Fecha ingreso transporte</span>
+                          <span className="att-detail-item__value">{formatFechaCorta(row.fechaIngresoNuevoTransporte)}</span>
+                        </div>
+                        <div className="att-detail-item">
+                          <span className="att-detail-item__label">Fecha retiro transporte</span>
+                          <span className="att-detail-item__value">{formatFechaCorta(row.fechaRetiroTransporte)}</span>
+                        </div>
+                      </>
+                    ) : null}
                     {estado === 'RETIRADO' ? (
                       <>
                         <div className="att-detail-item">
@@ -1427,9 +1553,11 @@ function DetailModal({ id, onClose, onEdit, onDelete, onOpenFicha, canEdit = tru
 
                 {(() => {
                   const extras = row.camposExtra || [];
-                  const hideObs = extras.some(
-                    (c) => c.visibleDetalle !== false && isObservacionColumna(c.columnaDb),
-                  );
+                  const obsEsJsonEquipos =
+                    row.esEquipos && String(row.observaciones || '').trim().startsWith('{');
+                  const hideObs =
+                    obsEsJsonEquipos ||
+                    extras.some((c) => c.visibleDetalle !== false && isObservacionColumna(c.columnaDb));
                   const hideFact = extras.some(
                     (c) => c.visibleDetalle !== false && isObsFacturacionColumna(c.columnaDb),
                   );
@@ -2084,80 +2212,127 @@ export function GestionInscripcionesPage({
       u.set('export', 'true');
       const data = await getJson(`/api/gestion/inscripciones?${u.toString()}`);
       const rows = data?.inscritos || [];
+      const equiposExport = data?.equiposExport || [];
       const exportCampos = data?.camposLista || listQuery.data?.camposLista || [];
       const mesSuffix = joinFilterParam(mes);
-      await exportRowsToExcel({
-        rows,
-        sheetName: 'Inscripciones',
-        fileNamePrefix: `inscripciones_${anio}${mesSuffix ? `_${mesSuffix.replace(/,/g, '-')}` : ''}`,
-        columns: [
-          { key: 'fechaInscripcion', header: 'Fecha inscripción', format: (v) => formatFechaCorta(v) },
-          { key: 'documentoParticipante', header: 'Documento participante' },
-          { key: 'nombreParticipante', header: 'Participante' },
-          {
-            key: 'fechaNacimiento',
-            header: 'Fecha nacimiento',
-            format: (v) => formatFechaCorta(v),
+      const inscColumns = [
+        { key: 'fechaInscripcion', header: 'Fecha inscripción', format: (v) => formatFechaCorta(v) },
+        { key: 'documentoParticipante', header: 'Documento participante' },
+        { key: 'nombreParticipante', header: 'Participante' },
+        {
+          key: 'fechaNacimiento',
+          header: 'Fecha nacimiento',
+          format: (v) => formatFechaCorta(v),
+        },
+        { key: 'documentoResponsable', header: 'Documento responsable' },
+        { key: 'tipoDocumentoResponsable', header: 'Tipo doc. responsable' },
+        { key: 'nombreResponsable', header: 'Responsable' },
+        { key: 'celularResponsable', header: 'Celular responsable' },
+        { key: 'correoResponsable', header: 'Correo responsable' },
+        { key: 'idCurso', header: 'ID curso' },
+        {
+          key: 'nombreCurso',
+          header: 'Curso / categoría',
+          format: (v, row) => v || row?.idCurso || '',
+        },
+        {
+          key: 'nombreLinea',
+          header: 'Línea',
+          format: (v, row) => v || row?.lineaId || '',
+        },
+        {
+          key: 'nombreActividad',
+          header: 'Actividad',
+          format: (v, row) => v || row?.actividadId || '',
+        },
+        { key: 'costoCurso', header: 'Valor curso' },
+        { key: 'estado', header: 'Estado' },
+        {
+          key: 'mes',
+          header: 'Mes',
+          format: (v) => MESES_LABEL[String(v).padStart(2, '0')] || v || '',
+        },
+        { key: 'año', header: 'Año' },
+        { key: 'sede', header: 'Sede' },
+        {
+          key: 'transporte',
+          header: 'Transporte',
+          format: (v) => (String(v || '').toUpperCase() === 'SI' ? 'Si' : 'No'),
+        },
+        { key: 'codigoFacturacion', header: 'Código facturación' },
+        {
+          key: 'observaciones',
+          header: 'Observaciones',
+          format: (v, row) => {
+            if (row?.esEquipos && String(v || '').trim().startsWith('{')) {
+              return row.eventoEquipos || 'Inscripción por equipos';
+            }
+            return v ?? '';
           },
-          { key: 'documentoResponsable', header: 'Documento responsable' },
-          { key: 'tipoDocumentoResponsable', header: 'Tipo doc. responsable' },
-          { key: 'nombreResponsable', header: 'Responsable' },
-          { key: 'celularResponsable', header: 'Celular responsable' },
-          { key: 'correoResponsable', header: 'Correo responsable' },
-          { key: 'idCurso', header: 'ID curso' },
-          {
-            key: 'nombreCurso',
-            header: 'Curso / categoría',
-            format: (v, row) => v || row?.idCurso || '',
+        },
+        { key: 'observacionFacturacion', header: 'Obs. facturación' },
+        { key: 'causalRetiro', header: 'Causal retiro' },
+        {
+          key: 'fechaRetiro',
+          header: 'Fecha retiro',
+          format: (v) => formatFechaCorta(v),
+        },
+        {
+          key: 'fechaRetiroTransporte',
+          header: 'Fecha retiro transporte',
+          format: (v) => formatFechaCorta(v),
+        },
+        ...exportCampos.map((c) => ({
+          key: `extra_${c.campoKey}`,
+          header: c.label || c.campoKey,
+          format: (_v, row) => {
+            const found = (row?.camposExtra || []).find((x) => x.campoKey === c.campoKey);
+            if (!found) return '';
+            return found.displayValue ?? found.valueLabel ?? found.value ?? '';
           },
-          {
-            key: 'nombreLinea',
-            header: 'Línea',
-            format: (v, row) => v || row?.lineaId || '',
-          },
-          {
-            key: 'nombreActividad',
-            header: 'Actividad',
-            format: (v, row) => v || row?.actividadId || '',
-          },
-          { key: 'costoCurso', header: 'Valor curso' },
-          { key: 'estado', header: 'Estado' },
-          {
-            key: 'mes',
-            header: 'Mes',
-            format: (v) => MESES_LABEL[String(v).padStart(2, '0')] || v || '',
-          },
-          { key: 'año', header: 'Año' },
-          { key: 'sede', header: 'Sede' },
-          {
-            key: 'transporte',
-            header: 'Transporte',
-            format: (v) => (String(v || '').toUpperCase() === 'SI' ? 'Si' : 'No'),
-          },
-          { key: 'codigoFacturacion', header: 'Código facturación' },
-          { key: 'observaciones', header: 'Observaciones' },
-          { key: 'observacionFacturacion', header: 'Obs. facturación' },
-          { key: 'causalRetiro', header: 'Causal retiro' },
-          {
-            key: 'fechaRetiro',
-            header: 'Fecha retiro',
-            format: (v) => formatFechaCorta(v),
-          },
-          {
-            key: 'fechaRetiroTransporte',
-            header: 'Fecha retiro transporte',
-            format: (v) => formatFechaCorta(v),
-          },
-          ...exportCampos.map((c) => ({
-            key: `extra_${c.campoKey}`,
-            header: c.label || c.campoKey,
-            format: (_v, row) => {
-              const found = (row?.camposExtra || []).find((x) => x.campoKey === c.campoKey);
-              if (!found) return '';
-              return found.displayValue ?? found.valueLabel ?? found.value ?? '';
+        })),
+      ];
+
+      const sheets = [
+        {
+          sheetName: 'Inscripciones',
+          rows,
+          columns: inscColumns,
+        },
+      ];
+
+      if (equiposExport.length > 0) {
+        sheets.push({
+          sheetName: 'Equipos',
+          rows: equiposExport,
+          columns: [
+            { key: 'idInscripcion', header: 'ID inscripción' },
+            { key: 'evento', header: 'Evento' },
+            { key: 'organizacion', header: 'Organización / club' },
+            { key: 'documentoResponsable', header: 'Documento responsable' },
+            { key: 'nombreResponsable', header: 'Responsable' },
+            { key: 'idCurso', header: 'ID curso' },
+            { key: 'nombreCurso', header: 'Curso / evento' },
+            { key: 'idEquipo', header: 'ID equipo' },
+            { key: 'nombreEquipo', header: 'Equipo' },
+            { key: 'disciplina', header: 'Disciplina' },
+            { key: 'categoria', header: 'Categoría' },
+            { key: 'entrenador', header: 'Entrenador' },
+            { key: 'entrenadorDocumento', header: 'Doc. entrenador' },
+            { key: 'deportista', header: 'Deportista' },
+            { key: 'documentoDeportista', header: 'Documento deportista' },
+            {
+              key: 'fechaNacimiento',
+              header: 'Fecha nacimiento',
+              format: (v) => formatFechaCorta(v),
             },
-          })),
-        ],
+          ],
+        });
+      }
+
+      await exportRowsToExcel({
+        fileNamePrefix: `inscripciones_${anio}${mesSuffix ? `_${mesSuffix.replace(/,/g, '-')}` : ''}`,
+        sheets,
       });
     } catch (err) {
       showToast('danger', err?.message || 'No se pudo exportar');
@@ -2711,6 +2886,11 @@ export function GestionInscripcionesPage({
                     <td style={colStyle('participante')} data-label="Participante">
                       <div className="fw-semibold att-gestion-cell-clip">{row.nombreParticipante || '—'}</div>
                       <div className="small text-muted att-gestion-cell-clip">{row.documentoParticipante}</div>
+                      {row.esEquipos ? (
+                        <span className="att-equipos-pill">
+                          Equipos{row.totalEquipos ? ` · ${row.totalEquipos}` : ''}
+                        </span>
+                      ) : null}
                     </td>
                     <td style={colStyle('curso')} data-label="Curso">
                       <div className="att-gestion-cell-clip">{row.nombreCurso || row.idCurso}</div>
@@ -2737,9 +2917,19 @@ export function GestionInscripcionesPage({
                       className="att-gestion-cell-clip"
                       style={colStyle('observaciones')}
                       data-label="Observación"
-                      title={row.observaciones || ''}
+                      title={
+                        row.esEquipos
+                          ? [row.eventoEquipos, row.totalEquipos ? `${row.totalEquipos} equipos` : null]
+                              .filter(Boolean)
+                              .join(' · ') || row.observaciones || ''
+                          : row.observaciones || ''
+                      }
                     >
-                      {row.observaciones || '—'}
+                      {row.esEquipos
+                        ? [row.eventoEquipos, row.totalEquipos ? `${row.totalEquipos} equipos` : 'Inscripción por equipos']
+                            .filter(Boolean)
+                            .join(' · ')
+                        : row.observaciones || '—'}
                     </td>
                     {camposLista.map((c) => {
                       const found = (row.camposExtra || []).find((x) => x.campoKey === c.campoKey);
