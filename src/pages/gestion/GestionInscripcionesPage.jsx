@@ -1756,7 +1756,10 @@ export function GestionInscripcionesPage({
     if (excludeTipo1) u.set('excludeTipo1', 'true');
     if (effectiveTipo != null && Number.isFinite(effectiveTipo)) u.set('tipo', String(effectiveTipo));
     else if (!excludeTipo1) u.set('tipo', '1');
-    // No incluir mes: al cambiar mes no hace falta recalcular facetas (el facet de mes lo omite).
+    // Incluir mes para que contadores de estado/línea/curso respeten el mes seleccionado.
+    // El facet de meses en backend omite 'mes' al calcularse, así no se auto-anula.
+    const mesP = joinFilterParam(mes);
+    if (!excludeTipo1 && mesP) u.set('mes', mesP);
     const estadoP = joinFilterParam(estado);
     if (estadoP) u.set('estado', estadoP);
     const sedeP = joinFilterParam(sede);
@@ -1772,6 +1775,7 @@ export function GestionInscripcionesPage({
     return u.toString();
   }, [
     anio,
+    mes,
     estado,
     sede,
     actividad,

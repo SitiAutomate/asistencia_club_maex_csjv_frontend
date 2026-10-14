@@ -96,27 +96,26 @@ export function GestionRecomendacionesPage() {
   const permisosQuery = useGestionPermisos(user);
   const canEdit = canGestion(permisosQuery.data, 'recomendaciones', 'editar');
 
+  const anioActual = String(new Date().getFullYear());
   const savedFilters = useMemo(
     () =>
       loadGestionFilters(FILTER_KEY, {
         actividad: '',
         idCurso: '',
-        anio: String(new Date().getFullYear()),
       }),
     [],
   );
 
   const [actividad, setActividad] = useState(() => String(savedFilters.actividad || ''));
   const [idCurso, setIdCurso] = useState(() => String(savedFilters.idCurso || ''));
-  const [anio, setAnio] = useState(() => String(savedFilters.anio || new Date().getFullYear()));
   const [participanteQ, setParticipanteQ] = useState('');
   const [exporting, setExporting] = useState(false);
   const [drafts, setDrafts] = useState({});
   const { toast, showToast, setToast } = useAttToast();
 
   useEffect(() => {
-    saveGestionFilters(FILTER_KEY, { actividad, idCurso, anio });
-  }, [actividad, idCurso, anio]);
+    saveGestionFilters(FILTER_KEY, { actividad, idCurso });
+  }, [actividad, idCurso]);
 
   const actQuery = useQuery({
     queryKey: ['gestion-catalog-actividades'],
@@ -142,9 +141,9 @@ export function GestionRecomendacionesPage() {
     const u = new URLSearchParams();
     if (actividad) u.set('actividad', actividad);
     if (idCurso) u.set('idCurso', idCurso);
-    if (anio) u.set('anio', anio);
+    u.set('anio', anioActual);
     return u.toString();
-  }, [actividad, idCurso, anio]);
+  }, [actividad, idCurso, anioActual]);
 
   const listEnabled = Boolean(actividad || idCurso);
 
@@ -163,7 +162,7 @@ export function GestionRecomendacionesPage() {
     mutationFn: (items) =>
       postJson('/api/gestion/recomendaciones/guardar', {
         items,
-        anio: anio ? Number(anio) : undefined,
+        anio: Number(anioActual),
       }),
     onSuccess: async (data) => {
       setDrafts({});
@@ -322,15 +321,6 @@ export function GestionRecomendacionesPage() {
             disabled={!actividad}
           />
         </div>
-        <div className="col-6 col-md-2">
-          <label className="form-label small mb-1">Año</label>
-          <input
-            className="form-control form-control-sm"
-            inputMode="numeric"
-            value={anio}
-            onChange={(e) => setAnio(e.target.value.replace(/\D/g, '').slice(0, 4))}
-          />
-        </div>
         <div className="col-12 col-md-4">
           <label className="form-label small mb-1">Participante</label>
           <GestionSearchInput
@@ -340,6 +330,10 @@ export function GestionRecomendacionesPage() {
           />
         </div>
       </div>
+
+      <p className="text-muted small mb-2">
+        Alcance fijo: año {anioActual}, meses octubre y noviembre, estados CONFIRMADO y ACTIVO.
+      </p>
 
       {!listEnabled ? (
         <p className="text-muted small">Seleccione al menos una actividad o curso para ver participantes.</p>
