@@ -2223,6 +2223,7 @@ export function GestionInscripcionesPage({
         { key: 'fechaInscripcion', header: 'Fecha inscripción', format: (v) => formatFechaCorta(v) },
         { key: 'documentoParticipante', header: 'Documento participante' },
         { key: 'nombreParticipante', header: 'Participante' },
+        { key: 'grupo', header: 'Grupo' },
         {
           key: 'fechaNacimiento',
           header: 'Fecha nacimiento',
