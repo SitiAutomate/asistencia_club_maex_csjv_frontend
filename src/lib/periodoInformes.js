@@ -13,7 +13,7 @@ export function usePeriodoInformesConfig(enabled = true) {
 export function periodoEtiqueta(config, periodoId) {
   const item = config?.periodos?.find((p) => p.id === periodoId);
   if (item?.etiqueta) return item.etiqueta;
-  return periodoId === 'ago_dic' ? 'Periodo 2' : 'Periodo 1';
+  return periodoId === 'ago_dic' ? 'Octubre - Noviembre' : 'Mayo - Junio';
 }
 
 export function periodoActualDesdeConfig(config) {

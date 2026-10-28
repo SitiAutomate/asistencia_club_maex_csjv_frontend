@@ -96,7 +96,8 @@ const ESTADOS_FILTRO = [
 
 function getPeriodoActualFallback() {
   const mes = new Date().getMonth() + 1;
-  return mes >= 11 ? 'ago_dic' : 'ene_jul';
+  // Alineado al backend: desde octubre (mes 10) = periodo ago_dic.
+  return mes >= 10 ? 'ago_dic' : 'ene_jul';
 }
 
 function StatIcon({ type }) {
