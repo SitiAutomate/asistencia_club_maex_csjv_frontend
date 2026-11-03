@@ -201,11 +201,13 @@ function RubricaModal({
 
     if (isComun) {
       if (!actividad) return;
+      const cat = selectedCurso ? cursoId(selectedCurso) : '';
       onSubmit({
         nombre: form.nombre.trim(),
         tipo: form.tipo.trim(),
         descripcion: form.descripcion.trim(),
-        categoria: selectedCurso ? cursoId(selectedCurso) : '',
+        // Backend exige categoria NOT NULL; vacío = aplica a todas las categorías de la actividad
+        categoria: cat,
         nombreCategoria: selectedCurso ? cursoLabel(selectedCurso) : 'Todas las categorías',
         alto: form.alto.trim(),
         medio: form.medio.trim(),
