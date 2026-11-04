@@ -40,7 +40,13 @@ function useDebouncedValue(value, delayMs = 350) {
   return debounced;
 }
 
-const ESTADOS_EDIT = ['CONFIRMADO', 'ACTIVO', 'INCAPACITADO', 'RETIRADO'];
+const ESTADOS_EDIT = [
+  'CONFIRMADO',
+  'ACTIVO',
+  'INCAPACITADO',
+  'RETIRADO',
+  'CURSOS NO APERTURADOS',
+];
 const SEDES = ['MEDELLÍN', 'RETIRO'];
 const MESES_SHORT = {
   '01': 'Ene',
@@ -1198,7 +1204,9 @@ function DetailModal({ id, onClose, onEdit, onDelete, onOpenFicha, canEdit = tru
         ? 'att-detail-badge--danger'
         : estado === 'INCAPACITADO'
           ? 'att-detail-badge--warn'
-          : 'att-detail-badge--muted';
+          : estado === 'CURSOS NO APERTURADOS'
+            ? 'att-detail-badge--muted'
+            : 'att-detail-badge--muted';
 
   const detailFooter = (
     <>
