@@ -6,7 +6,7 @@ import { getDefaultAppPath, isAdminLike, isNavKeyEnabled } from '../../lib/navFe
 import { normalizeForSearch } from '../../lib/normalizeSearch.js';
 import {
   periodoActualDesdeConfig,
-  periodoEtiqueta,
+  periodoEtiquetaMesCorte,
   usePeriodoInformesConfig,
 } from '../../lib/periodoInformes.js';
 import { exportRowsToExcel } from '../../lib/exportExcel.js';
@@ -206,19 +206,12 @@ export function AdministradorPage() {
   const resumenQuery = useQuery({
     queryKey: ['admin-informes-resumen', applied],
     queryFn: () => {
-      const u = new URLSearchParams();
-      if (applied.fechaInicio) u.set('fechaInicio', applied.fechaInicio);
-      if (applied.fechaFin) u.set('fechaFin', applied.fechaFin);
-      if (applied.anio) u.set('anio', applied.anio);
-      if (applied.periodo) u.set('periodo', applied.periodo);
-      if (applied.categoria) u.set('categoria', applied.categoria);
-      if (applied.linea) u.set('linea', applied.linea);
-      if (applied.entrenador) u.set('entrenador', applied.entrenador);
-      if (applied.estado && applied.estado !== 'todos') u.set('estado', applied.estado);
+      const u = buildInformesFilterParams(applied);
       return getJson(`/api/admin/informes/resumen?${u.toString()}`);
     },
     enabled: navEnabled && isAdmin,
     staleTime: 120_000,
+    placeholderData: (prev) => prev,
   });
 
   const metaQuery = useQuery({
@@ -248,19 +241,13 @@ export function AdministradorPage() {
   const chartQuery = useQuery({
     queryKey: ['admin-informes-chart', applied],
     queryFn: () => {
-      const u = new URLSearchParams();
-      if (applied.fechaInicio) u.set('fechaInicio', applied.fechaInicio);
-      if (applied.fechaFin) u.set('fechaFin', applied.fechaFin);
-      if (applied.anio) u.set('anio', applied.anio);
-      if (applied.periodo) u.set('periodo', applied.periodo);
-      if (applied.categoria) u.set('categoria', applied.categoria);
-      if (applied.linea) u.set('linea', applied.linea);
-      if (applied.entrenador) u.set('entrenador', applied.entrenador);
-      if (applied.estado && applied.estado !== 'todos') u.set('estado', applied.estado);
+      const u = buildInformesFilterParams(applied);
       return getJson(`/api/admin/informes/grafico-categorias?${u.toString()}`);
     },
-    enabled: navEnabled && isAdmin,
+    // Solo carga al abrir la pestaña (evita 3 queries pesadas a la vez).
+    enabled: navEnabled && isAdmin && activeTab === 'graficos',
     staleTime: 60_000,
+    placeholderData: (prev) => prev,
   });
 
   const rows = listQuery.data?.evaluaciones || [];
@@ -361,7 +348,7 @@ export function AdministradorPage() {
           <span className="att-admin-stat-card__icon" aria-hidden="true">
             <StatIcon type="total" />
           </span>
-          <span className="att-admin-stat-card__label">Total inscritos (periodo)</span>
+          <span className="att-admin-stat-card__label">Total inscritos (mes final)</span>
           <strong className="att-admin-stat-card__value">{statsLoading ? '…' : r.totalEvaluaciones ?? '—'}</strong>
         </article>
         <article className={`att-admin-stat-card ${statsLoading ? 'is-loading' : ''}`}>
@@ -382,7 +369,7 @@ export function AdministradorPage() {
           <span className="att-admin-stat-card__icon" aria-hidden="true">
             <StatIcon type="missingMonth" />
           </span>
-          <span className="att-admin-stat-card__label">Sin informe (periodo)</span>
+          <span className="att-admin-stat-card__label">Sin informe (mes final)</span>
           <strong className="att-admin-stat-card__value">
             {statsLoading ? '…' : r.participantesSinInformePeriodo ?? '—'}
           </strong>
@@ -401,8 +388,8 @@ export function AdministradorPage() {
                 Periodo
               </label>
               <select className="form-select form-select-sm" value={periodo} onChange={(e) => setPeriodo(e.target.value)}>
-                <option value="ene_jul">{periodoEtiqueta(periodoConfig, 'ene_jul')}</option>
-                <option value="ago_dic">{periodoEtiqueta(periodoConfig, 'ago_dic')}</option>
+                <option value="ene_jul">{periodoEtiquetaMesCorte(periodoConfig, 'ene_jul')}</option>
+                <option value="ago_dic">{periodoEtiquetaMesCorte(periodoConfig, 'ago_dic')}</option>
               </select>
             </div>
             <div className="col-12 col-md-6 col-lg-3">
