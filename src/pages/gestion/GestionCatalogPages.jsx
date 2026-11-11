@@ -248,13 +248,16 @@ function CursoFormModal({
   useEffect(() => {
     if (!open || !formLoadKey) return;
     if (editing) {
-      const docenteVal = editing.docente != null ? String(editing.docente) : '';
+      // Preferir correo (AppSheet); si en BD quedó ID, usar docenteCorreo del JOIN.
+      const docenteVal = String(
+        editing.docenteCorreo || editing.docente || '',
+      ).trim();
       setPinnedDocente(
         docenteVal
           ? {
               value: docenteVal,
               label: editing.nombreDocente
-                ? `${editing.nombreDocente} (${docenteVal})`
+                ? `${editing.nombreDocente} · ${docenteVal}`
                 : docenteVal,
             }
           : null,
@@ -333,11 +336,18 @@ function CursoFormModal({
     [linQuery.data],
   );
   const docenteOptions = useMemo(() => {
-    const rows = (entQuery.data?.entrenadores || []).map((e) => ({
-      value: String(e.id),
-      label: `${e.nombre || 'Sin nombre'}${e.correo ? ` · ${e.correo}` : ''}`,
-      searchText: `${e.nombre} ${e.correo} ${e.id}`,
-    }));
+    // AppSheet / Reportes: Docente = correo (no ID).
+    const rows = (entQuery.data?.entrenadores || [])
+      .map((e) => {
+        const correo = String(e.correo || '').trim();
+        if (!correo) return null;
+        return {
+          value: correo,
+          label: `${e.nombre || 'Sin nombre'} · ${correo}`,
+          searchText: `${e.nombre} ${correo} ${e.id}`,
+        };
+      })
+      .filter(Boolean);
     const pin = pinnedDocente;
     if (pin?.value && !rows.some((o) => String(o.value) === String(pin.value))) {
       rows.unshift({
