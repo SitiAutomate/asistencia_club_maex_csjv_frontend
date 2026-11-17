@@ -371,14 +371,8 @@ export function AdministradorPage() {
 
       <section className="att-admin-filters card border-0 shadow-sm mb-3">
         <div className="card-body">
-          <div className="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
-            <div>
-              <h3 className="h6 fw-bold mb-1">Filtros de búsqueda</h3>
-              <p className="small text-muted mb-0">
-                Se aplican solos al cambiarlos. Inscritos = mes final (junio / noviembre). Informes =
-                rango del periodo (mayo–junio / octubre–noviembre).
-              </p>
-            </div>
+          <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <h3 className="h6 fw-bold mb-0">Filtros de búsqueda</h3>
             {listFetching ? (
               <span className="small text-muted">Actualizando…</span>
             ) : null}
