@@ -16,29 +16,15 @@ export function periodoEtiqueta(config, periodoId) {
   return periodoId === 'ago_dic' ? 'Octubre - Noviembre' : 'Mayo - Junio';
 }
 
-/** Etiqueta del mes final (junio / noviembre) para el dashboard admin. */
+/**
+ * Etiqueta del periodo en admin: rango de informes (may–jun / oct–nov).
+ * Los inscritos siguen contándose solo en el mes final.
+ */
 export function periodoEtiquetaMesCorte(config, periodoId) {
   const item = config?.periodos?.find((p) => p.id === periodoId);
-  if (item?.etiquetaMesCorte) return item.etiquetaMesCorte;
-  if (item?.mesFin) {
-    const nombres = [
-      '',
-      'Enero',
-      'Febrero',
-      'Marzo',
-      'Abril',
-      'Mayo',
-      'Junio',
-      'Julio',
-      'Agosto',
-      'Septiembre',
-      'Octubre',
-      'Noviembre',
-      'Diciembre',
-    ];
-    return nombres[Number(item.mesFin)] || periodoEtiqueta(config, periodoId);
-  }
-  return periodoId === 'ago_dic' ? 'Noviembre' : 'Junio';
+  if (item?.etiqueta) return item.etiqueta;
+  if (item?.etiquetaMesCorte && item?.mesInicio === item?.mesFin) return item.etiquetaMesCorte;
+  return periodoId === 'ago_dic' ? 'Octubre - Noviembre' : 'Mayo - Junio';
 }
 
 export function periodoActualDesdeConfig(config) {

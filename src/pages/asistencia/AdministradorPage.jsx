@@ -11,6 +11,15 @@ import {
 } from '../../lib/periodoInformes.js';
 import { exportRowsToExcel } from '../../lib/exportExcel.js';
 
+function useDebouncedValue(value, delayMs = 350) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(t);
+  }, [value, delayMs]);
+  return debounced;
+}
+
 function tieneInformePdf(informe) {
   return Boolean(String(informe ?? '').trim());
 }
@@ -179,17 +188,6 @@ export function AdministradorPage() {
   const [entrenador, setEntrenador] = useState('');
   const [estado, setEstado] = useState('todos');
 
-  const [applied, setApplied] = useState({
-    periodo: getPeriodoActualFallback(),
-    fechaInicio: '',
-    fechaFin: '',
-    anio: yearActual,
-    categoria: '',
-    linea: '',
-    entrenador: '',
-    estado: 'todos',
-  });
-
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(25);
   const [tableSearch, setTableSearch] = useState('');
@@ -200,8 +198,27 @@ export function AdministradorPage() {
     if (!periodoConfigQuery.isSuccess) return;
     const actual = periodoActualDesdeConfig(periodoConfig);
     setPeriodo(actual);
-    setApplied((prev) => ({ ...prev, periodo: actual }));
   }, [periodoConfigQuery.isSuccess, periodoConfig]);
+
+  // Auto-filtro: cada cambio se aplica con debounce (sin botón "Aplicar").
+  const filters = useMemo(
+    () => ({
+      periodo: periodo || periodoActual,
+      fechaInicio: fechaInicio.trim(),
+      fechaFin: fechaFin.trim(),
+      anio: String(anio || '').trim(),
+      categoria: categoria.trim(),
+      linea: linea.trim(),
+      entrenador: entrenador.trim(),
+      estado,
+    }),
+    [periodo, periodoActual, fechaInicio, fechaFin, anio, categoria, linea, entrenador, estado],
+  );
+  const applied = useDebouncedValue(filters, 350);
+
+  useEffect(() => {
+    setPage(1);
+  }, [applied]);
 
   const resumenQuery = useQuery({
     queryKey: ['admin-informes-resumen', applied],
@@ -210,7 +227,7 @@ export function AdministradorPage() {
       return getJson(`/api/admin/informes/resumen?${u.toString()}`);
     },
     enabled: navEnabled && isAdmin,
-    staleTime: 120_000,
+    staleTime: 90_000,
     placeholderData: (prev) => prev,
   });
 
@@ -224,7 +241,7 @@ export function AdministradorPage() {
       return { categorias: cat?.categorias || [], entrenadores: ent?.entrenadores || [] };
     },
     enabled: navEnabled && isAdmin,
-    staleTime: 5 * 60_000,
+    staleTime: 10 * 60_000,
   });
 
   const listQuery = useQuery({
@@ -235,7 +252,7 @@ export function AdministradorPage() {
     },
     enabled: navEnabled && isAdmin,
     placeholderData: (prev) => prev,
-    staleTime: 60_000,
+    staleTime: 45_000,
   });
 
   const chartQuery = useQuery({
@@ -244,7 +261,6 @@ export function AdministradorPage() {
       const u = buildInformesFilterParams(applied);
       return getJson(`/api/admin/informes/grafico-categorias?${u.toString()}`);
     },
-    // Solo carga al abrir la pestaña (evita 3 queries pesadas a la vez).
     enabled: navEnabled && isAdmin && activeTab === 'graficos',
     staleTime: 60_000,
     placeholderData: (prev) => prev,
@@ -252,6 +268,7 @@ export function AdministradorPage() {
 
   const rows = listQuery.data?.evaluaciones || [];
   const total = Number(listQuery.data?.total ?? 0);
+  const listFetching = listQuery.isFetching || resumenQuery.isFetching;
 
   const filteredRows = useMemo(() => {
     return filterRowsBySearch(rows, tableSearch);
@@ -273,21 +290,6 @@ export function AdministradorPage() {
     }
   };
 
-  const aplicarFiltros = () => {
-    setApplied({
-      periodo: periodo || periodoActual,
-      fechaInicio: fechaInicio.trim(),
-      fechaFin: fechaFin.trim(),
-      anio: String(anio || '').trim(),
-      categoria: categoria.trim(),
-      linea: linea.trim(),
-      entrenador: entrenador.trim(),
-      estado,
-    });
-    setCategoriaOpen(false);
-    setPage(1);
-  };
-
   const limpiarFiltros = () => {
     setPeriodo(periodoSugerido);
     setFechaInicio('');
@@ -299,16 +301,7 @@ export function AdministradorPage() {
     setCategoriaSearch('');
     setEntrenador('');
     setEstado('todos');
-    setApplied({
-      periodo: periodoSugerido,
-      fechaInicio: '',
-      fechaFin: '',
-      anio: yearActual,
-      categoria: '',
-      linea: '',
-      entrenador: '',
-      estado: 'todos',
-    });
+    setTableSearch('');
     setPage(1);
   };
 
@@ -378,7 +371,18 @@ export function AdministradorPage() {
 
       <section className="att-admin-filters card border-0 shadow-sm mb-3">
         <div className="card-body">
-          <h3 className="h6 fw-bold mb-3">Filtros de búsqueda</h3>
+          <div className="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+            <div>
+              <h3 className="h6 fw-bold mb-1">Filtros de búsqueda</h3>
+              <p className="small text-muted mb-0">
+                Se aplican solos al cambiarlos. Inscritos = mes final (junio / noviembre). Informes =
+                rango del periodo (mayo–junio / octubre–noviembre).
+              </p>
+            </div>
+            {listFetching ? (
+              <span className="small text-muted">Actualizando…</span>
+            ) : null}
+          </div>
           <div className="row g-2 g-md-3 align-items-end">
             <div className="col-12 col-md-6 col-lg-3">
               <label className="form-label small mb-1 att-admin-filter-label">
@@ -543,11 +547,8 @@ export function AdministradorPage() {
               </select>
             </div>
             <div className="col-12 d-flex justify-content-end gap-2 mt-2">
-              <button type="button" className="btn btn-primary btn-sm" onClick={aplicarFiltros}>
-                Aplicar filtros
-              </button>
               <button type="button" className="btn btn-outline-secondary btn-sm" onClick={limpiarFiltros}>
-                Limpiar
+                Limpiar filtros
               </button>
             </div>
           </div>
